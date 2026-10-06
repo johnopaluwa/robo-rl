@@ -17,8 +17,12 @@ DEMO_LABELS = ("item_a", "item_b", "item_c")
 DEFAULT_MIN_CONFIDENCE = 0.65
 
 
-def _finite_number(value: Any, field_name: str) -> float:
-    """Return a finite float or raise a useful validation error."""
+def finite_number(value: Any, field_name: str) -> float:
+    """Return a finite float or raise a useful validation error.
+
+    Public because the shared pipeline (and the web viewer built on it) needs the
+    same validation rules as the ROS 2 nodes.
+    """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{field_name} must be a number")
     try:
@@ -50,9 +54,9 @@ class Detection:
         if not isinstance(self.label, str) or not self.label.strip():
             raise ValueError("label must be a non-empty string")
 
-        object.__setattr__(self, "x", _finite_number(self.x, "x"))
-        object.__setattr__(self, "y", _finite_number(self.y, "y"))
-        confidence = _finite_number(self.confidence, "confidence")
+        object.__setattr__(self, "x", finite_number(self.x, "x"))
+        object.__setattr__(self, "y", finite_number(self.y, "y"))
+        confidence = finite_number(self.confidence, "confidence")
         if not 0.0 <= confidence <= 1.0:
             raise ValueError("confidence must be between 0 and 1")
         object.__setattr__(self, "confidence", confidence)
@@ -111,7 +115,7 @@ def should_attempt_pick(
     detection: Detection, min_confidence: float = DEFAULT_MIN_CONFIDENCE
 ) -> bool:
     """Return whether the demo picker should attempt a *simulated* pick."""
-    threshold = _finite_number(min_confidence, "min_confidence")
+    threshold = finite_number(min_confidence, "min_confidence")
     if not 0.0 <= threshold <= 1.0:
         raise ValueError("min_confidence must be between 0 and 1")
     return detection.confidence >= threshold

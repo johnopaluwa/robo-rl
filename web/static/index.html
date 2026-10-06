@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>robo-rl viewer</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">◉</span>
+    <div>
+      <h1>robo-rl viewer</h1>
+      <p class="sub" id="mode-label">connecting…</p>
+    </div>
+  </div>
+  <div class="badges">
+    <span class="badge" id="mode-badge" title="Which transport the pipeline is running on">—</span>
+    <span class="badge" id="link-badge" title="How the browser is receiving state">—</span>
+    <span class="badge ghost" id="uptime-badge">t=0.0s</span>
+  </div>
+</header>
+
+<div class="banner" id="honesty-banner" role="status">
+  <strong>Simulation mode.</strong>
+  <span>ROS 2 is not running. These decisions are produced by the same
+  <code>pipeline.py</code> the ROS 2 nodes call, but nothing here proves DDS.
+  Run <code>tools/verify.sh --ros2</code> on a machine with ROS 2 for that.</span>
+</div>
+
+<main>
+  <section class="panel cell-panel">
+    <div class="panel-head">
+      <h2>The cell</h2>
+      <span class="hint" id="cell-hint">object position from the detection message</span>
+    </div>
+    <svg id="cell" viewBox="0 0 520 380" role="img" aria-label="Simulated pick cell">
+      <defs>
+        <linearGradient id="beltGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1b2430"/>
+          <stop offset="100%" stop-color="#141b24"/>
+        </linearGradient>
+      </defs>
+      <rect x="20" y="30" width="480" height="190" rx="10" fill="url(#beltGrad)" stroke="#2c3a4a"/>
+      <g id="grid" stroke="#212d3a" stroke-width="1"></g>
+      <g id="bins"></g>
+      <line id="arm" x1="260" y1="6" x2="260" y2="40" stroke="#4d6274" stroke-width="6" stroke-linecap="round"/>
+      <g id="gripper">
+        <line x1="250" y1="0" x2="250" y2="14" stroke="#7d97ab" stroke-width="5" stroke-linecap="round"/>
+        <line x1="270" y1="0" x2="270" y2="14" stroke="#7d97ab" stroke-width="5" stroke-linecap="round"/>
+      </g>
+      <g id="object" class="hidden">
+        <circle id="object-dot" r="15"/>
+        <text id="object-label" text-anchor="middle" dy="4" font-size="11" fill="#0b1017"></text>
+      </g>
+      <text x="260" y="360" text-anchor="middle" font-size="12" fill="#5d7186" id="cell-caption">idle</text>
+    </svg>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Operator controls</h2>
+      <span class="hint">the only three buttons a customer sees</span>
+    </div>
+    <div class="buttons">
+      <button id="btn-start" class="big go">START</button>
+      <button id="btn-stop" class="big halt">STOP</button>
+      <button id="btn-support" class="big call">CALL SUPPORT</button>
+    </div>
+    <div class="advanced">
+      <div class="adv-head">
+        <span>Advanced (your view, not the customer's)</span>
+        <button id="adv-toggle" class="link" aria-expanded="true">hide</button>
+      </div>
+      <div id="adv-body">
+        <label class="row">
+          <span>min_confidence <b id="threshold-value">0.65</b></span>
+          <input type="range" id="threshold" min="0.05" max="0.95" step="0.01" value="0.65">
+        </label>
+        <p class="note" id="threshold-note"></p>
+        <label class="row">
+          <span>camera rate <b id="rate-value">1.0</b> Hz</span>
+          <input type="range" id="rate" min="0.25" max="5" step="0.25" value="1">
+        </label>
+        <label class="row check">
+          <input type="checkbox" id="auto-pause">
+          <span>pause the line when a low-confidence item needs a human (Wizard-of-Oz)</span>
+        </label>
+        <div class="row">
+          <button id="btn-resolve" class="small">Resolve review</button>
+          <button id="btn-reset" class="small">Reset counters</button>
+        </div>
+        <p class="note">
+          Same command schema travels over ROS 2 on <code id="cmd-topic">arm_command</code>.
+          <span id="cmd-feedback"></span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Counters</h2><span class="hint" id="run-state">running</span></div>
+    <div class="stats" id="stats"></div>
+    <div class="rates">
+      <div><span id="rate-success">—</span><small>grasp success</small></div>
+      <div><span id="rate-review">—</span><small>needs human</small></div>
+      <div><span id="rate-interventions">0</span><small>support calls</small></div>
+    </div>
+    <div class="panel-head sub-head"><h2>Detection confidence</h2><span class="hint">last 80 detections</span></div>
+    <svg id="spark" viewBox="0 0 300 70" role="img" aria-label="Detection confidence history">
+      <line id="spark-threshold" x1="0" y1="35" x2="300" y2="35" stroke="#e0a458" stroke-dasharray="4 4" stroke-width="1"/>
+      <polyline id="spark-line" fill="none" stroke="#5fb3d4" stroke-width="2"/>
+    </svg>
+    <div class="panel-head sub-head"><h2>ROS 2 graph</h2><span class="hint" id="graph-note"></span></div>
+    <div class="graph" id="graph"></div>
+  </section>
+
+  <section class="panel log-panel">
+    <div class="panel-head">
+      <h2>Pipeline log</h2>
+      <span class="hint">identical wording to the ROS 2 node output</span>
+    </div>
+    <div class="log" id="log" aria-live="polite"></div>
+  </section>
+</main>
+
+<footer>
+  <span>Proof lives in <code>docs/VERIFICATION.md</code> and <code>tools/verify.sh</code>.</span>
+  <span id="footer-mode"></span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
