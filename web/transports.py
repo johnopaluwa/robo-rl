@@ -16,6 +16,7 @@ installed. The web viewer always shows which one is live -- see
 
 from __future__ import annotations
 
+import os
 import threading
 from typing import Callable, Dict, List, Optional
 
@@ -185,6 +186,42 @@ class RosTransport:
         finally:
             if self._rclpy.ok():
                 self._rclpy.shutdown()
+
+    def selftest(self, timeout_s: float = 3.0) -> dict:
+        """Publish to a private topic and see whether it comes back.
+
+        This is the decisive question when the viewer appears in `ros2 node
+        list` yet receives nothing: is this process's DDS stack working at all?
+        A loopback that fails points at the transport (entities, discovery,
+        spinning); a loopback that succeeds means the transport is fine and the
+        problem is elsewhere. Either answer is worth more than another guess.
+
+        Must be called after ``start()`` so callbacks are being processed.
+        """
+        topic = "web_viewer_selftest"
+        received: List[str] = []
+        arrived = threading.Event()
+
+        def _on_selftest(payload: str) -> None:
+            received.append(payload)
+            arrived.set()
+
+        self.subscribe(topic, _on_selftest)
+        token = f"selftest-{os.urandom(4).hex()}"
+        try:
+            self.publish(topic, token)
+        except Exception as error:  # noqa: BLE001 - reported, never raised
+            return {"topic": topic, "sent": False, "received": False, "error": str(error)}
+        ok = arrived.wait(timeout_s)
+        return {
+            "topic": topic,
+            "sent": True,
+            "received": ok,
+            "token": token,
+            "echoed": received[:1],
+            "spin_thread_alive": bool(self._thread and self._thread.is_alive()),
+            "spin_error": self.spin_error,
+        }
 
     def graph(self) -> dict:
         """Return the real ROS 2 graph as reported by rclpy."""

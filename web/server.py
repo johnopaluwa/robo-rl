@@ -454,6 +454,9 @@ def main(argv=None) -> int:
         auto_pause_on_review=args.auto_pause,
     )
     transport.start()
+    if transport.is_real_ros:
+        runner.selftest = transport.selftest()
+        runner.snapshot_extra = {"selftest": runner.selftest}
     state = ViewerState(runner)
 
     ViewerHandler.state = state

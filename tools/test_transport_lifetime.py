@@ -64,18 +64,25 @@ class _StubPublisher:
         self.topic = topic
         self.sent: list[str] = []
 
+    on_publish = None
+
     def publish(self, message) -> None:
         self.sent.append(message.data)
+        if self.on_publish is not None:
+            self.on_publish(self.topic, message.data)
 
     def destroy(self) -> None:
         pass
 
 
 class _StubNode:
+    """Delivery is immediate and in-process, so a self-test cannot pass vacuously."""
+
     def __init__(self, name: str) -> None:
         self.name = name
         self.subscriptions: list[_StubSubscription] = []
         self.publishers: list[_StubPublisher] = []
+        self.deliver = True  # flip to False to simulate a deaf DDS stack
 
     def create_subscription(self, msg_type, topic, callback, qos):  # noqa: ANN001
         subscription = _StubSubscription(topic, callback)
@@ -84,8 +91,18 @@ class _StubNode:
 
     def create_publisher(self, msg_type, topic, qos):  # noqa: ANN001
         publisher = _StubPublisher(topic)
+        publisher.on_publish = self._deliver
         self.publishers.append(publisher)
         return publisher
+
+    def _deliver(self, topic: str, payload: str) -> None:
+        if not self.deliver:
+            return
+        for subscription in list(self.subscriptions):
+            if subscription.topic == topic:
+                message = _StubString()
+                message.data = payload
+                subscription.callback(message)
 
     def get_node_names(self):
         return [self.name]
@@ -187,6 +204,49 @@ class RosTransportLifetimeTests(unittest.TestCase):
 
         self.assertIn("arm_command", transport._publishers)
         self.assertEqual(transport.node.publishers[0].sent, ['{"action": "stop"}'])
+
+
+class TransportSelftestTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._saved = {
+            name: sys.modules.get(name)
+            for name in ("rclpy", "rclpy.node", "std_msgs", "std_msgs.msg", "transports")
+        }
+        _install_stub_ros()
+        sys.modules.pop("transports", None)
+        import transports  # noqa: PLC0415
+
+        self.transports = transports
+
+    def tearDown(self) -> None:
+        for name, module in self._saved.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
+        sys.modules.pop("transports", None)
+
+    def test_selftest_reports_success_when_the_stack_works(self):
+        transport = self.transports.build_transport("ros2")
+        transport.start()
+        result = transport.selftest(timeout_s=1.0)
+        self.assertTrue(result["sent"])
+        self.assertTrue(
+            result["received"],
+            "the loopback self-test must report success when delivery works",
+        )
+
+    def test_selftest_reports_failure_when_messages_never_arrive(self):
+        """The decisive case: this is what a broken DDS stack looks like."""
+        transport = self.transports.build_transport("ros2")
+        transport.node.deliver = False
+        transport.start()
+        result = transport.selftest(timeout_s=0.3)
+        self.assertTrue(result["sent"])
+        self.assertFalse(
+            result["received"],
+            "a deaf transport must not be reported as healthy",
+        )
 
 
 if __name__ == "__main__":

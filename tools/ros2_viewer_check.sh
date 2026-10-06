@@ -199,9 +199,25 @@ TOPIC_INFO="$(ros2_cli "$CLI_TIMEOUT" topic info /detected_object | tr '\n' '; '
 CMD_INFO="$(ros2_cli "$CLI_TIMEOUT" topic info /arm_command | tr '\n' '; ')"
 ECHO_ONE="$(timeout 8 ros2 topic echo /detected_object --once 2>&1 | head -5 | tr '\n' '; ' || true)"
 HEALTH_NOW="$(curl -sS --max-time 3 "http://127.0.0.1:$PORT/api/health" 2>&1 || true)"
+# The viewer knows why it is deaf far better than the CLI does: ask it.
+VIEWER_SELF="$(curl -sS --max-time 3 "http://127.0.0.1:$PORT/api/state" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    state = json.load(sys.stdin)
+except Exception as error:
+    print("could not parse /api/state:", error); raise SystemExit(0)
+transport = (state.get("graph") or {}).get("transport") or {}
+print("graph.transport:", json.dumps(transport, sort_keys=True))
+print("viewer selftest:", json.dumps(state.get("selftest"), sort_keys=True))
+print("counters:", json.dumps(state.get("counters", {}), sort_keys=True))
+for line in (state.get("log") or [])[-8:]:
+    print("  viewer log:", line.get("level"), line.get("text"))
+' 2>&1)"
 note "ros2 topic info /arm_command: $CMD_INFO"
 note "ros2 topic echo (one message): $ECHO_ONE"
 note "viewer health now: $HEALTH_NOW"
+note "viewer self-report:"
+note "$VIEWER_SELF"
 TOPIC_HZ="$(timeout 6 ros2 topic hz /detected_object --window 20 2>&1 | head -3 | tr '\n' '; ' || true)"
 NODE_LIST="$(ros2_cli "$CLI_TIMEOUT" node list | tr '\n' ' ')"
 note "ros2 topic info: $TOPIC_INFO"
@@ -213,7 +229,8 @@ ros2 topic info /detected_object: $TOPIC_INFO
 ros2 topic info /arm_command: $CMD_INFO
 ros2 topic echo /detected_object --once: $ECHO_ONE
 viewer health: $HEALTH_NOW
-viewer graph/transport state: $(tail -c 800 "$ARTIFACT_DIR/ros2_viewer.log" | tr '\n' ' ' | tail -c 400)
+viewer self-report:
+$VIEWER_SELF
 ros2 topic hz (5s): $TOPIC_HZ
 ros2 node list: $NODE_LIST
 picker log:

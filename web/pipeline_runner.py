@@ -142,6 +142,10 @@ class PipelineRunner:
         # identical: camera -> topic -> picker -> decision.
         self.transport.subscribe(self.topic, self._on_message)
 
+        #: Populated by the server in ROS 2 mode: does this process's own DDS
+        #: stack publish and receive? See RosTransport.selftest.
+        self.selftest: Optional[dict] = None
+
         self._remember("info", "Pipeline runner started")
         self._remember("info", f"Transport: {transport.label}")
         if self.mode == "sim":
@@ -458,4 +462,5 @@ class PipelineRunner:
                 "confidence_history": [round(c, 3) for c in self.confidence_history],
                 "log": [line.to_dict(self.started_at) for line in list(self.log)[-40:]],
                 "graph": self.transport.graph(),
+                "selftest": getattr(self, "selftest", None),
             }
