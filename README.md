@@ -29,9 +29,11 @@ building around it. Candidate prospect list:
 ## Start here — and see it actually work
 
 ```bash
-./tools/verify.sh              # run every proof that works without ROS 2
+./tools/verify.sh              # proofs that need neither ROS 2 nor MuJoCo
 python3 web/server.py          # open http://localhost:8000 and watch it decide
 ./tools/verify.sh --ros2       # on a machine with ROS 2: proves the DDS path
+# after installing simulation/requirements-sim.txt in .venv:
+PATH="$PWD/.venv/bin:$PATH" ./tools/verify.sh --simulation
 ```
 
 The badge above is not decoration: CI installs real ROS 2 Jazzy, builds the
@@ -51,6 +53,7 @@ and which dead services to avoid.
 5. **[docs/SKILLS_CHECKLIST.md](docs/SKILLS_CHECKLIST.md)** — what to learn, in what order, with resources.
 6. **[docs/TECH_STACK.md](docs/TECH_STACK.md)** — exact tools/hardware to buy and install, fit to your budget.
 7. **[docs/BUSINESS_PLAN.md](docs/BUSINESS_PLAN.md)** — how to get a real pilot customer and, later, raise money.
+8. **[simulation/README.md](simulation/README.md)** — the Phase 2 MuJoCo tray environment, seeded proofs, and PPO workflow.
 
 **The rule this repo runs on:** no milestone is "done" until you can re-run a
 command and see the same result. Simulation results are labelled `(sim)` and can

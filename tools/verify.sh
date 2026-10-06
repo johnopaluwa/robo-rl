@@ -2,8 +2,9 @@
 #
 # One command that verifies what is actually verifiable in this checkout.
 #
-#   ./tools/verify.sh            # everything except ROS 2 (skips it, clearly)
-#   ./tools/verify.sh --ros2     # also verifies against real ROS 2 (must pass)
+#   ./tools/verify.sh                 # proofs that work without optional runtimes
+#   ./tools/verify.sh --ros2          # require and verify real ROS 2
+#   ./tools/verify.sh --simulation    # require MuJoCo and verify Phase 2 env/demo
 #
 # Design rule: this script never reports a milestone as verified when the thing
 # that proves it did not run. Simulation results are labelled (sim), ROS 2
@@ -21,9 +22,11 @@ ARTIFACT_DIR="artifacts/proofs"
 mkdir -p "$ARTIFACT_DIR"
 
 REQUIRE_ROS2=0
+REQUIRE_SIMULATION=0
 for arg in "$@"; do
   case "$arg" in
     --ros2) REQUIRE_ROS2=1 ;;
+    --simulation) REQUIRE_SIMULATION=1 ;;
     -h|--help)
       sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -64,6 +67,50 @@ if python3 tools/proof_pipeline.py --artifact-dir "$ARTIFACT_DIR"; then
   record "pipeline logic proof" PASS "(sim)" "transport=in-process -> pipeline_proof.json"
 else
   record "pipeline logic proof" FAIL "(sim)" "see pipeline_proof.json"
+fi
+
+# --------------------------------------------- 2b. MuJoCo simulation (optional)
+step_header "Phase 2 MuJoCo environment + randomized tray demo"
+SIMULATION_STATUS="NOT VERIFIED"
+if python3 -c "import gymnasium, mujoco, numpy" >/dev/null 2>&1; then
+  SIM_TEST_LOG="$ARTIFACT_DIR/simulation_tests.txt"
+  SIM_TESTS_STATUS="PASS"
+  if PYTHONPATH="$REPO_ROOT" python3 -m unittest discover \
+       -s simulation/tests -v >"$SIM_TEST_LOG" 2>&1; then
+    SIM_TEST_COUNT=$(grep -oE 'Ran [0-9]+ tests' "$SIM_TEST_LOG" | grep -oE '[0-9]+' | head -1)
+    echo "  ${GREEN}PASS${RESET} ${SIM_TEST_COUNT:-?} MuJoCo environment tests"
+    record "Phase 2: tray env + randomization tests" PASS "(sim/MuJoCo)" \
+      "${SIM_TEST_COUNT:-?} tests -> $SIM_TEST_LOG"
+  else
+    tail -25 "$SIM_TEST_LOG"
+    echo "  ${RED}FAIL${RESET} simulation tests; see $SIM_TEST_LOG"
+    record "Phase 2: tray env + randomization tests" FAIL "(sim/MuJoCo)" \
+      "see $SIM_TEST_LOG"
+    SIM_TESTS_STATUS="FAIL"
+  fi
+
+  if PYTHONPATH="$REPO_ROOT" python3 -m simulation.demo_mujoco \
+       --seed 20261006 --episodes 5 --artifact-dir "$ARTIFACT_DIR" --quiet; then
+    echo "  ${GREEN}PASS${RESET} MuJoCo loaded and completed 5 scripted randomized transfers"
+    record "Phase 2: MuJoCo demo" PASS "(sim/MuJoCo)" \
+      "5/5 scripted transfers -> mujoco_demo.json (not a learned-policy result)"
+  else
+    echo "  ${RED}FAIL${RESET} MuJoCo demo did not complete; see mujoco_demo.json"
+    record "Phase 2: MuJoCo demo" FAIL "(sim/MuJoCo)" "see mujoco_demo.json"
+    SIM_TESTS_STATUS="FAIL"
+  fi
+  if [ "$SIM_TESTS_STATUS" = "PASS" ]; then SIMULATION_STATUS="PASS"; else SIMULATION_STATUS="FAIL"; fi
+else
+  if [ "$REQUIRE_SIMULATION" = "1" ]; then
+    echo "  ${RED}FAIL${RESET} --simulation was requested but Gymnasium/MuJoCo is unavailable"
+    record "Phase 2: MuJoCo environment + demo" FAIL "(sim/MuJoCo)" \
+      "install simulation/requirements-sim.txt"
+    SIMULATION_STATUS="FAIL"
+  else
+    echo "  ${YELLOW}NOT VERIFIED HERE${RESET} (install simulation/requirements-sim.txt; re-run with --simulation)"
+    record "Phase 2: MuJoCo environment + demo" "NOT VERIFIED" "(sim/MuJoCo)" \
+      "optional runtime missing; no Phase 2 simulation claim"
+  fi
 fi
 
 # --------------------------------------------------------- 3. live web viewer
@@ -184,6 +231,11 @@ SUMMARY_MD="$ARTIFACT_DIR/SUMMARY.md"
   echo "## Milestone claims"
   echo
   echo "- Pipeline decisions, schema, and command schema: verified by logic/proof/ws checks."
+  if [ "$SIMULATION_STATUS" = "PASS" ]; then
+    echo "- **Phase 2 MuJoCo environment + domain randomization: PASS.** The scripted transfer is a simulator smoke test, not an RL-policy result."
+  else
+    echo "- **Phase 2 MuJoCo environment: $SIMULATION_STATUS.** No simulator milestone is claimed unless its runtime checks pass."
+  fi
   if [ "$ROS2_STATUS" = "PASS" ]; then
     echo "- **ROS 2 publisher/subscriber pair: VERIFIED on this machine over real DDS.**"
     echo "  \`MILESTONES.md\` may tick *'Built a toy ROS 2 publisher/subscriber pair'\*."
@@ -212,6 +264,11 @@ if [ "$FAILED" = "1" ]; then
   printf '  %sSOMETHING FAILED%s\n' "$RED" "$RESET"
 else
   printf '  %sEverything that could run, passed.%s' "$GREEN" "$RESET"
+  if [ "$SIMULATION_STATUS" = "PASS" ]; then
+    printf ' MuJoCo simulation checks are verified here.'
+  else
+    printf ' MuJoCo simulation is %s (install simulation/requirements-sim.txt and use --simulation).' "$SIMULATION_STATUS"
+  fi
   if [ "$ROS2_STATUS" = "PASS" ]; then
     printf ' ROS 2 is verified here.\n'
   else

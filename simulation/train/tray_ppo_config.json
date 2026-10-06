@@ -1,0 +1,13 @@
+{
+  "algorithm": "PPO",
+  "environment": "simulation.envs.tray_loading.TrayLoadingEnv",
+  "policy": "MlpPolicy",
+  "total_timesteps": 100000,
+  "seed": 7,
+  "n_steps": 1024,
+  "batch_size": 64,
+  "gamma": 0.99,
+  "device": "cpu",
+  "max_episode_steps": 180,
+  "domain_randomization": true
+}

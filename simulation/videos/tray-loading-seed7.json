@@ -1,0 +1,53 @@
+{
+  "config": {
+    "controller": "scripted-cartesian-v1",
+    "episodes": 1,
+    "seed": 7,
+    "source_hash": "a24332fb5f2d750874cc30a85e36067904bcc72f07557f034e5267d5ccd2ce44"
+  },
+  "config_hash": "5d802066234c0b9662e094b2aab005ac0ce84cd68b980fb58e0a9ee63a2c20fd",
+  "does_not_prove": [
+    "that a PPO or other learned policy can solve the task",
+    "physical gripper contact, camera perception, or sim-to-real transfer",
+    "any ROS 2 or physical-hardware milestone"
+  ],
+  "episode_results": [
+    {
+      "domain_parameters": {
+        "friction": 1.2488427563170097,
+        "light_intensity": 0.6518428565979512,
+        "source_x": -0.2724866346753466,
+        "source_y": 0.14299696834904718,
+        "target_x": 0.3285959966343271,
+        "target_y": -0.09892541160338693,
+        "tray_scale": 0.9400498854733675
+      },
+      "episode": 0,
+      "seed": 7,
+      "success": true
+    }
+  ],
+  "episodes": 1,
+  "git_commit": "e21044b967e3431223c26695592935f2e127232a",
+  "git_worktree_dirty": true,
+  "proof": "mujoco-tray-loading-demo",
+  "proves": [
+    "the MuJoCo model loads and advances headlessly",
+    "tray pickup, transfer and release work with the scripted smoke-test controller",
+    "episode domain parameters are emitted for reproducibility"
+  ],
+  "record": "simulation/videos/tray-loading-seed7.json",
+  "seed": 7,
+  "success_rate": 1.0,
+  "successes": 1,
+  "transport": "MuJoCo tray physics + scripted virtual-grasp controller (simulation only)",
+  "verdict": "PASS",
+  "video": "simulation/videos/tray-loading-seed7.mp4",
+  "video_metadata": {
+    "episode_seed": 7,
+    "frames": 163,
+    "height": 500,
+    "renderer": "headless software diagnostic projection",
+    "width": 800
+  }
+}
