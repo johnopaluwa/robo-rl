@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ROS 2 / colcon build products
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Frontend build products
+node_modules/
+dist/
+.angular/
