@@ -15,6 +15,14 @@ on:
   pull_request:
   workflow_dispatch:
 
+# One run per branch. A new push supersedes an in-flight run instead of queueing
+# behind it -- so a wedged job can never block the next commit's results, and
+# cannot quietly burn runner time. (`gh run cancel` is not permitted for this
+# integration, so this is the mechanism that keeps hung runs from piling up.)
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
@@ -83,6 +91,10 @@ jobs:
 
       - name: Verify the browser path carries live DDS data
         shell: bash
+        # Backstop: the script bounds every external call, but if something
+        # still wedges, GitHub kills the step and the next one reports the
+        # diagnostics file written so far. A hang must never look like silence.
+        timeout-minutes: 8
         run: |
           source /opt/ros/jazzy/setup.bash
           ./tools/ros2_viewer_check.sh

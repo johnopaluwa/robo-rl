@@ -99,3 +99,21 @@
   recorded here so the log does not credit the wrong fix.
 - Also added an EXIT trap that records unexpected exit statuses into the
   diagnostics file, so the next silent abort is visible instead of invisible.
+
+## 2026-10-06 (late, 2) — The browser-path step hung; bounded everything
+- After the `set -u` fix, the step still did not complete: it ran 12+ minutes with
+  no further output, and `gh run cancel` returned 403 (not permitted for this
+  integration), so the runs could not be stopped from here.
+- Root cause class: unbounded external calls. `ros2 topic list` and friends talk
+  to a discovery daemon and can block indefinitely when that daemon is unhealthy
+  -- and a leftover daemon from the `verify.sh --ros2` step earlier in the same
+  job is a plausible trigger.
+- Fixes, all aimed at making a bad step visible instead of silent:
+  * every `ros2` CLI call goes through a `ros2_cli` helper wrapped in `timeout`
+    (default 15s), so no call can hang;
+  * the daemon is reset before the check (`ros2 daemon stop`);
+  * diagnostics are appended as the script progresses, not only on failure, so a
+    timeout that kills the script still leaves an explanation behind;
+  * the CI step has `timeout-minutes: 8` as a backstop;
+  * the workflow gained a `concurrency` group with `cancel-in-progress`, so a new
+    push supersedes an in-flight run rather than queueing behind a wedged one.
