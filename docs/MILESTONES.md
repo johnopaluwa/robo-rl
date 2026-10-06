@@ -25,14 +25,17 @@ Current verified status (this container has no ROS 2):
 | 21 unit tests | PASS |
 | pipeline logic proof (16 checks) | PASS |
 | live viewer + WebSocket command round-trip | PASS |
-| Phase 0: niche chosen in README | PENDING |
+| Phase 0: niche chosen in README | **PASS** (2026-10-06: bakery tray loading; pending validation by 5 interviews) |
 | Phase 0: 5 customer conversations | PENDING (0/5) |
 | ROS 2 pub/sub + commands | **VERIFIED in CI** (real DDS, see the tick above) |
 | browser path carrying live DDS to the browser | **VERIFIED in CI** ([run 37490542247](https://github.com/johnopaluwa/robo-rl/actions/runs/37490542247)) |
 
 ## Phase 0 — Niche Lock & Groundwork (Weeks 1-4)
-- [ ] Chosen specific task written down in README.md ("I'm building a robot that...")
+- [x] Chosen specific task written down in README.md ("I'm building a robot that...")
       *proof:* `./tools/verify.sh` → "Phase 0: niche chosen in README"
+      **DONE 2026-10-06:** bakery tray loading/unloading — a working hypothesis
+      chosen by desk research (see [log.md](../research-notes/log.md)); it stays
+      provisional until the 5 customer conversations below confirm or kill it.
 - [ ] 5 business owner/facility manager conversations completed, notes in research-notes/interviews/
       *proof:* `./tools/verify.sh` → "Phase 0: 5 customer conversations" (counts the files)
 - [x] Dev environment set up (Python, Git habit, repo structure)

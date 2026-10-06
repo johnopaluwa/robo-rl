@@ -11,10 +11,20 @@ This repo is the working home for that project: the plan, the learning log,
 the simulation code, the ROS 2 workspace, and the Angular fleet/control
 dashboard that is your unfair advantage.
 
-**Current task:** not selected yet. Use the Phase 0 customer-discovery
-conversations to choose one narrow, evidence-backed task before specializing
-the simulation or buying hardware. Capture conversations with the
-[interview template](research-notes/customer-discovery-template.md).
+**Current task (chosen 2026-10-06):** *I'm building a robot that loads and
+unloads baking trays at small and mid-sized bakeries, because that task is
+monotonous, physically hard, and the people who do it are increasingly
+impossible to hire.*
+
+This is a **working hypothesis, not yet evidence**: it was chosen by desk
+research (see the [log entry](research-notes/log.md) for the reasoning and
+alternatives considered), and it now goes to the Phase 0 test — **5
+conversations with bakery owners / facility managers** recorded in
+`research-notes/interviews/` (use the
+[interview template](research-notes/customer-discovery-template.md)). If the
+conversations kill this task, change this sentence honestly instead of
+building around it. Candidate prospect list:
+[research-notes/prospects.md](research-notes/prospects.md).
 
 ## Start here — and see it actually work
 
