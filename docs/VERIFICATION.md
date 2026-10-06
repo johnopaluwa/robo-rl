@@ -163,6 +163,28 @@ From the last `./tools/verify.sh` run in this sandbox (no ROS 2 available):
 Simulation cannot tick the ROS 2 milestone. Nothing here can tick a hardware
 milestone. That is the point of the table.
 
+## How to read the CI history
+
+**The Actions run list is a log, not a status.** Every past run keeps its own
+verdict forever, so a healthy project still shows a column of red ❌ from the
+commits where things were broken. Only the newest run says anything about the
+current code.
+
+Where to look, in order of usefulness:
+
+1. **README badge** — the newest run on the default branch. Green means current.
+2. **PR "Checks" tab** — the latest verdict per job for the PR's head commit.
+3. **The newest row in the run list** — the top entry, not the ones below it.
+4. Any red run older than the newest commit is history. Click it if you want the
+   story; it will not change.
+
+Being honest about this matters more than looking tidy: the red runs below are
+where the seven real bugs in the next section were found. Deleting them to make
+the page look better would be exactly the "screenshot instead of evidence"
+behaviour this file exists to prevent. If you want a genuinely clean board, use
+`gh run delete` sparingly and always after the fix is merged — never to hide a
+failure that is still live.
+
 ## Lessons this system has already paid for
 
 Every one of these was a real bug found by running the checks, not by review.
