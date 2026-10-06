@@ -86,10 +86,10 @@ conversation is the notes you wrote down; the script only checks that they exist
 | Python without heavy LLM scaffolding | `pipeline.py` has no ROS import, is type-annotated, and 21 tests pass | `./tools/verify.sh` | **PASS** |
 | Linear algebra + probability primer | not mechanically provable — evidence is notes in `research-notes/` | n/a | **NOT VERIFIED** |
 | ROS 2 beginner tutorials completed | not mechanically provable — evidence is `research-notes/log.md` entries | n/a | **NOT VERIFIED** |
-| Toy ROS 2 publisher/subscriber pair | `tools/ros2_smoke_test.py`: real nodes, real DDS, observer node, command round-trip | `./tools/verify.sh --ros2` | **NOT VERIFIED** (needs ROS 2 machine) |
+| Toy ROS 2 publisher/subscriber pair | `tools/ros2_smoke_test.py`: real nodes, real DDS, observer node, command round-trip | `./tools/verify.sh --ros2` | **VERIFIED in CI** ([run 37474982123](https://github.com/johnopaluwa/robo-rl/actions/runs/37474982123), ROS 2 Jazzy) |
 | …the same, in a free cloud box | Codespaces devcontainer runs the suite on creation | `.devcontainer/` session | **READY** (see [ROS2_ANYWHERE.md](ROS2_ANYWHERE.md)) |
 | …the same, automatically and publicly | CI job `ros2`: setup-ros jazzy, build, `verify.sh --ros2`, browser probe | push → Actions tab | **READY** (first run pending) |
-| Browser sees live DDS, not a sim | `tools/ros2_viewer_check.sh` runs the real nodes + viewer and probes `/ws` with `--expect-ros2` | `./tools/ros2_viewer_check.sh` | **READY** (needs ROS 2 machine) |
+| Browser sees live DDS, not a sim | `tools/ros2_viewer_check.sh` runs the real nodes + viewer and probes `/ws` with `--expect-ros2` | `./tools/ros2_viewer_check.sh` | **FAILING in CI** — diagnosed via annotations, see research-notes/log.md |
 | PyTorch blitz | not mechanically provable — artifact would be a training script in `simulation/train/` | n/a | **NOT VERIFIED** |
 
 The ROS 2 row is the one that matters most right now. It stays unchecked until
@@ -150,7 +150,8 @@ From the last `./tools/verify.sh` run in this sandbox (no ROS 2 available):
 
 | proof | transport | status |
 | --- | --- | --- |
-| Cloud ROS 2 in CI (`ros2` job) | (ros2) | **READY — runs on push** |
+| Cloud ROS 2 in CI (`ros2` job, milestone proof) | (ros2) | **PASS** (run 37474982123) |
+| Cloud ROS 2 browser path (`ros2_viewer_check.sh`) | (ros2) | **FAIL — under diagnosis** |
 | Codespaces devcontainer suite | (ros2) | **READY — runs on create** |
 | unit tests (21) | python 3 | **PASS** |
 | pipeline logic proof (16 checks) | (sim) | **PASS** |

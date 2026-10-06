@@ -52,3 +52,29 @@
   a claim-check that cannot fail is worse than no check.
 - Remaining honest caveat: the workflow and devcontainer were written in a
   container without Docker or ROS 2, so their first real run is in CI.
+
+## 2026-10-06 (night) — First real CI run: the milestone is verified
+- Pushed the cloud paths. GitHub Actions picked the workflow up on the branch.
+- **`Logic proofs` job: PASS** (10s). **`Verify with real ROS 2` step: PASS** —
+  which means `tools/verify.sh --ros2` ran on real ROS 2 Jazzy over real DDS and
+  every check passed: 21 unit tests, 16 pipeline checks, live viewer + WS
+  round-trip, the honesty guard, and `ros2_smoke_test.py` (real pub/sub, schema
+  on the wire, STOP/START changing live node behaviour).
+  => the "toy ROS 2 publisher/subscriber pair" milestone is now ticked, with a
+  public CI run as its evidence. Cloud ROS 2 counts as tier 4: a real runtime.
+- **`Verify the browser path carries live DDS data` step: FAIL** — my
+  `ros2_viewer_check.sh` failed on its first ever execution. As predicted, an
+  untested script finds something. Two responses:
+  1. Hardened it: no `producer | grep -q` under `pipefail` (early-exit grep can
+     SIGPIPE the producer and flip a successful match into a failed pipeline),
+     generator-style readiness loops, and `ROS_LOCALHOST_ONLY=1` so DDS
+     discovery stays on loopback instead of relying on multicast across the VM
+     interface — the classic cross-process DDS failure in cloud runners.
+  2. Made it diagnosable: failures now emit `::error::` GitHub annotations with
+     the log tails (readable via `gh run view`), plus `ros2 topic info`,
+     `ros2 topic hz` and `ros2 node list` so "DDS is not delivering" can be told
+     apart from "our bridge is broken". CI logs and artifacts live on blob
+     storage that this sandbox cannot reach, so annotations are the channel.
+- Note: `ros2_smoke_test.py` exercises nodes in one process; the viewer check is
+  the first *cross-process* DDS test in this repo, which is exactly where it
+  broke. That distinction is worth remembering.

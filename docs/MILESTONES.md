@@ -27,7 +27,8 @@ Current verified status (this container has no ROS 2):
 | live viewer + WebSocket command round-trip | PASS |
 | Phase 0: niche chosen in README | PENDING |
 | Phase 0: 5 customer conversations | PENDING (0/5) |
-| ROS 2 pub/sub + commands | NOT VERIFIED (needs a ROS 2 machine) |
+| ROS 2 pub/sub + commands | **VERIFIED in CI** (real DDS, see the tick above) |
+| browser path carrying live DDS | being fixed (see research-notes/log.md) |
 
 ## Phase 0 — Niche Lock & Groundwork (Weeks 1-4)
 - [ ] Chosen specific task written down in README.md ("I'm building a robot that...")
@@ -40,19 +41,20 @@ Current verified status (this container has no ROS 2):
       *proof:* `test -s research-notes/log.md`
 
 ## Phase 1 — Python, Math, ROS 2 (Months 1-4)
+- [x] Built a toy ROS 2 publisher/subscriber pair from scratch
+      **VERIFIED 2026-10-06 in CI** on real ROS 2 Jazzy over real DDS:
+      [run 37474982123](https://github.com/johnopaluwa/robo-rl/actions/runs/37474982123)
+      — `tools/ros2_smoke_test.py` observed real pub/sub traffic, validated every
+      payload against the shared schema, and confirmed STOP/START on
+      `arm_command` changed the live node's behaviour. This is a real ROS 2
+      runtime (Ubuntu 24.04 + Jazzy), not a simulation: see
+      [VERIFICATION.md](VERIFICATION.md) tier 4.
 - [ ] Comfortable writing Python scripts without heavy LLM scaffolding
       *proof:* `pipeline.py` stays ROS-free, typed, and covered by `unittest`
 - [ ] Completed a linear algebra + probability primer
       *proof:* notes in research-notes/ — not mechanically provable, say so honestly
 - [ ] Completed official ROS 2 beginner tutorials (CLI + client libraries)
       *proof:* dated entries in research-notes/log.md
-- [ ] Built a toy ROS 2 publisher/subscriber pair from scratch
-      *proof:* `./tools/verify.sh --ros2` → real DDS pub/sub, schema on the wire,
-      and commands that change real node state (`tools/ros2_smoke_test.py`).
-      No ROS 2 locally? Two free paths, both already configured:
-      Codespaces (`.devcontainer/`, runs the suite on create) or CI
-      (`.github/workflows/verify.yml`, runs on every push and is public).
-      See docs/ROS2_ANYWHERE.md.
 - [ ] Completed PyTorch 60-minute blitz; trained a basic model end to end
       *proof:* a training script under simulation/train/ that runs headless
 
