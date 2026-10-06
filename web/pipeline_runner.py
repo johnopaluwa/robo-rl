@@ -157,6 +157,13 @@ class PipelineRunner:
             )
         else:
             self._remember("good", f"Subscribed to live ROS 2 topic '{self.topic}'")
+            if hasattr(self.transport, "created_subscriptions"):
+                self._remember(
+                    "info",
+                    "real subscriptions created: "
+                    f"{self.transport.created_subscriptions or '{}'} | "
+                    f"objects held: {len(getattr(self.transport, '_subscription_objects', []))}",
+                )
 
     # -- logging -------------------------------------------------------------
     def _remember(self, level: str, text: str) -> None:

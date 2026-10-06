@@ -111,6 +111,12 @@ class RosTransport:
         # and it cost a CI cycle to find. See tools/test_transport_lifetime.py.
         self._subscription_objects: List[object] = []
         self._published_count: Dict[str, int] = {}
+        # Introspection for the browser and for CI diagnostics. An empty
+        # subscription list or a non-null spin_error is the difference between
+        # "DDS never delivered" and "we never started listening".
+        self.created_subscriptions: Dict[str, str] = {}
+        self.created_publishers: Dict[str, str] = {}
+        self.spin_error: Optional[str] = None
 
         rclpy.init(args=None)
         self.node = Node(node_name)
@@ -123,6 +129,7 @@ class RosTransport:
             if publisher is None:
                 publisher = self.node.create_publisher(self._String, topic, 10)
                 self._publishers[topic] = publisher
+                self.created_publishers[topic] = type(publisher).__name__
             self._published_count[topic] = self._published_count.get(topic, 0) + 1
         message = self._String()
         message.data = payload
@@ -141,11 +148,16 @@ class RosTransport:
                     for listener in listeners:
                         listener(message.data)
 
-                subscription = self.node.create_subscription(
-                    String, topic, _handler, 10
-                )
+                try:
+                    subscription = self.node.create_subscription(
+                        String, topic, _handler, 10
+                    )
+                except Exception as error:  # noqa: BLE001 - must be reportable
+                    self.created_subscriptions[topic] = f"ERROR: {error}"
+                    raise
                 # Keep it alive (see the note in __init__).
                 self._subscription_objects.append(subscription)
+                self.created_subscriptions[topic] = type(subscription).__name__
             self._subscriptions[topic].append(callback)
 
     def start(self) -> None:
@@ -158,8 +170,14 @@ class RosTransport:
     def _spin(self) -> None:
         try:
             self._rclpy.spin(self.node)
-        except Exception:  # pragma: no cover - shutdown races only
-            pass
+        except Exception as error:  # pragma: no cover - depends on rclpy internals
+            # Never swallow this. If spinning dies, no callback ever fires and
+            # the viewer silently receives nothing -- which is indistinguishable
+            # from "DDS is broken" unless the reason is recorded. Ask me how I
+            # know: a swallowed exception here cost a CI debugging cycle.
+            self.spin_error = f"{type(error).__name__}: {error}"
+        else:
+            self.spin_error = "spin() returned without raising (context shut down?)"
 
     def stop(self) -> None:
         try:
@@ -188,6 +206,13 @@ class RosTransport:
             "nodes": nodes,
             "topics": topics,
             "note": "Live rclpy graph introspection.",
+            "transport": {
+                "created_subscriptions": dict(self.created_subscriptions),
+                "created_publishers": dict(self.created_publishers),
+                "subscription_objects_held": len(self._subscription_objects),
+                "spin_thread_alive": bool(self._thread and self._thread.is_alive()),
+                "spin_error": self.spin_error,
+            },
         }
 
 

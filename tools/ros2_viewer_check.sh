@@ -196,6 +196,12 @@ fi
 # Distinguish "DDS is not delivering" from "our bridge is broken": ask the ROS
 # CLI directly, independently of the viewer.
 TOPIC_INFO="$(ros2_cli "$CLI_TIMEOUT" topic info /detected_object | tr '\n' '; ')"
+CMD_INFO="$(ros2_cli "$CLI_TIMEOUT" topic info /arm_command | tr '\n' '; ')"
+ECHO_ONE="$(timeout 8 ros2 topic echo /detected_object --once 2>&1 | head -5 | tr '\n' '; ' || true)"
+HEALTH_NOW="$(curl -sS --max-time 3 "http://127.0.0.1:$PORT/api/health" 2>&1 || true)"
+note "ros2 topic info /arm_command: $CMD_INFO"
+note "ros2 topic echo (one message): $ECHO_ONE"
+note "viewer health now: $HEALTH_NOW"
 TOPIC_HZ="$(timeout 6 ros2 topic hz /detected_object --window 20 2>&1 | head -3 | tr '\n' '; ' || true)"
 NODE_LIST="$(ros2_cli "$CLI_TIMEOUT" node list | tr '\n' ' ')"
 note "ros2 topic info: $TOPIC_INFO"
@@ -203,7 +209,11 @@ note "ros2 topic hz:   $TOPIC_HZ"
 note "ros2 node list:  $NODE_LIST"
 
 fail "the browser-facing WebSocket did not carry live ROS 2 data.
-ros2 topic info: $TOPIC_INFO
+ros2 topic info /detected_object: $TOPIC_INFO
+ros2 topic info /arm_command: $CMD_INFO
+ros2 topic echo /detected_object --once: $ECHO_ONE
+viewer health: $HEALTH_NOW
+viewer graph/transport state: $(tail -c 800 "$ARTIFACT_DIR/ros2_viewer.log" | tr '\n' ' ' | tail -c 400)
 ros2 topic hz (5s): $TOPIC_HZ
 ros2 node list: $NODE_LIST
 picker log:
