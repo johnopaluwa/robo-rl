@@ -175,3 +175,16 @@
   `DDS_WAIT` bug (flagged line 206 used, assigned 207) and stays silent on the
   correct ordering. Names never assigned are ignored, since those are env vars.
 - tools tests now 20 (16 contract/lifetime + 4 shell guards).
+
+## 2026-10-06 (final) — GREEN: ROS 2 verified end to end, in the browser
+- CI run 37490542247: **both jobs success**, all eight ROS 2 steps green, 5 min.
+  * `Verify with real ROS 2` (milestone proof) — real nodes, real DDS, schema on
+    the wire, STOP/START changing live node behaviour.
+  * `Verify the browser path carries live DDS data` — real detections reached the
+    browser over the WebSocket that the Phase 4 Angular dashboard will use.
+- Both claims are now publicly checkable via the README badge, with run URLs
+  recorded in MILESTONES.md and VERIFICATION.md.
+- Total for the day: 7 commits chasing this, each one a real bug (unset variable,
+  GC'd subscription, unbounded CLI calls, hanging cleanup, discovery race,
+  use-before-assign). None was found by reading code; all were found by running
+  it. That is the argument for the whole verification system, in one sentence.

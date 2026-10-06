@@ -28,7 +28,7 @@ Current verified status (this container has no ROS 2):
 | Phase 0: niche chosen in README | PENDING |
 | Phase 0: 5 customer conversations | PENDING (0/5) |
 | ROS 2 pub/sub + commands | **VERIFIED in CI** (real DDS, see the tick above) |
-| browser path carrying live DDS | being fixed (see research-notes/log.md) |
+| browser path carrying live DDS to the browser | **VERIFIED in CI** ([run 37490542247](https://github.com/johnopaluwa/robo-rl/actions/runs/37490542247)) |
 
 ## Phase 0 — Niche Lock & Groundwork (Weeks 1-4)
 - [ ] Chosen specific task written down in README.md ("I'm building a robot that...")
@@ -41,6 +41,12 @@ Current verified status (this container has no ROS 2):
       *proof:* `test -s research-notes/log.md`
 
 ## Phase 1 — Python, Math, ROS 2 (Months 1-4)
+- [x] The browser path carries live ROS 2 data (not a simulation)
+      **VERIFIED 2026-10-06 in CI**: `tools/ros2_viewer_check.sh` starts the real
+      nodes, the viewer in `--mode ros2`, then drives the browser's own WebSocket
+      protocol and asserts real detections arrived through it. This is the
+      "ROS 2 in the browser" claim, proved rather than asserted -- and it is the
+      same path the Phase 4 Angular dashboard will use.
 - [x] Built a toy ROS 2 publisher/subscriber pair from scratch
       **VERIFIED 2026-10-06 in CI** on real ROS 2 Jazzy over real DDS:
       [run 37474982123](https://github.com/johnopaluwa/robo-rl/actions/runs/37474982123)

@@ -89,7 +89,7 @@ conversation is the notes you wrote down; the script only checks that they exist
 | Toy ROS 2 publisher/subscriber pair | `tools/ros2_smoke_test.py`: real nodes, real DDS, observer node, command round-trip | `./tools/verify.sh --ros2` | **VERIFIED in CI** ([run 37474982123](https://github.com/johnopaluwa/robo-rl/actions/runs/37474982123), ROS 2 Jazzy) |
 | …the same, in a free cloud box | Codespaces devcontainer runs the suite on creation | `.devcontainer/` session | **READY** (see [ROS2_ANYWHERE.md](ROS2_ANYWHERE.md)) |
 | …the same, automatically and publicly | CI job `ros2`: setup-ros jazzy, build, `verify.sh --ros2`, browser probe | push → Actions tab | **READY** (first run pending) |
-| Browser sees live DDS, not a sim | `tools/ros2_viewer_check.sh` runs the real nodes + viewer and probes `/ws` with `--expect-ros2` | `./tools/ros2_viewer_check.sh` | **FAILING in CI** — diagnosed via annotations, see research-notes/log.md |
+| Browser sees live DDS, not a sim | `tools/ros2_viewer_check.sh` runs the real nodes + viewer and probes `/ws` with `--expect-ros2` | `./tools/ros2_viewer_check.sh` | **VERIFIED in CI** ([run 37490542247](https://github.com/johnopaluwa/robo-rl/actions/runs/37490542247), real detections reached the browser) |
 | PyTorch blitz | not mechanically provable — artifact would be a training script in `simulation/train/` | n/a | **NOT VERIFIED** |
 
 The ROS 2 row is the one that matters most right now. It stays unchecked until
@@ -151,7 +151,7 @@ From the last `./tools/verify.sh` run in this sandbox (no ROS 2 available):
 | proof | transport | status |
 | --- | --- | --- |
 | Cloud ROS 2 in CI (`ros2` job, milestone proof) | (ros2) | **PASS** (run 37474982123) |
-| Cloud ROS 2 browser path (`ros2_viewer_check.sh`) | (ros2) | **FAIL — under diagnosis** |
+| Cloud ROS 2 browser path (`ros2_viewer_check.sh`) | (ros2) | **PASS** ([run 37490542247](https://github.com/johnopaluwa/robo-rl/actions/runs/37490542247)) |
 | Codespaces devcontainer suite | (ros2) | **READY — runs on create** |
 | unit tests (21) | python 3 | **PASS** |
 | pipeline logic proof (16 checks) | (sim) | **PASS** |
@@ -162,6 +162,33 @@ From the last `./tools/verify.sh` run in this sandbox (no ROS 2 available):
 
 Simulation cannot tick the ROS 2 milestone. Nothing here can tick a hardware
 milestone. That is the point of the table.
+
+## Lessons this system has already paid for
+
+Every one of these was a real bug found by running the checks, not by review.
+They are written down because each is easy to reintroduce:
+
+1. **`set -u` vs ROS 2 setup scripts.** `source /opt/ros/*/setup.bash` and
+   colcon's overlay are not nounset-safe; the first unset variable they touch
+   aborts your script with status 1 and a stderr line only. Relax nounset around
+   those `source` lines, and assert the overlay file exists first.
+2. **rclpy does not keep your subscriptions alive.** `create_subscription()`
+   returns an object; if you discard it, Python's GC tears down the DDS
+   subscription while the node stays in the graph. Symptom: `ros2 node list`
+   shows your node, `ros2 topic hz` shows a healthy rate, and your node receives
+   nothing. Hold a reference. (`tools/test_transport_lifetime.py` guards this.)
+3. **Never `wait` on a `ros2 run` wrapper.** They can ignore SIGTERM, and an
+   unbounded `wait` in a cleanup trap hangs until the CI step times out --
+   turning a passing check into a red one. TERM, poll `kill -0`, then KILL.
+4. **Wait for DDS discovery before judging a bridge.** A fresh rclpy node needs
+   a moment to discover a publisher; probing at HTTP-ready (0.18s after start)
+   races that and reports a false failure.
+5. **Use-before-assign aborts silently under `set -u`** (e.g. a `note "...${VAR}"`
+   line above the line that assigns `VAR`). Shellcheck does *not* catch this;
+   `tools/test_shell_scripts.py` does.
+6. **Standard a diagnostics channel before you need it.** A red check whose logs
+   you cannot reach is worth nothing: this repo posts the failure detail as a PR
+   comment, and CI job logs/artifacts were unreachable from the dev sandbox.
 
 ## Adding a proof for a new milestone
 

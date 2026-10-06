@@ -24,6 +24,10 @@ python3 web/server.py          # open http://localhost:8000 and watch it decide
 ./tools/verify.sh --ros2       # on a machine with ROS 2: proves the DDS path
 ```
 
+The badge above is not decoration: CI installs real ROS 2 Jazzy, builds the
+package, and proves that pub/sub, operator commands and the browser-visible data
+path all work over real DDS. Click it to see the evidence.
+
 No ROS 2 installed? You do not need to install anything — run a real ROS 2 box in
 your browser for free via **GitHub Codespaces** (`.devcontainer/` is ready), or
 let **GitHub Actions** prove the ROS 2 path automatically on every push. See
