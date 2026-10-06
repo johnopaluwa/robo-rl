@@ -75,10 +75,25 @@ $(tail -25 "$ARTIFACT_DIR/colcon_build.log")"
   fi
 fi
 
+# ROS 2's setup scripts and colcon's generated overlays are NOT written to be
+# compatible with `set -u`, and referencing one of their unset variables makes
+# bash abort the whole script with status 1 and no message of its own. That is
+# exactly how this script failed its first two CI runs: it printed the two notes
+# above, then died silently at these two lines. Relax nounset just for sourcing.
+set +u
+note "sourcing /opt/ros/$DISTRO/setup.bash ..."
 # shellcheck disable=SC1090
 source "/opt/ros/$DISTRO/setup.bash"
+note "  ros2 CLI: $(command -v ros2 || echo 'NOT FOUND on PATH')"
+
+if [ ! -f "ros2_ws/install/setup.bash" ]; then
+  fail "ros2_ws/install/setup.bash not found. Build the workspace first:
+  ( cd ros2_ws && colcon build --symlink-install --packages-select robo_rl_demo )"
+fi
 # shellcheck disable=SC1091
 source "ros2_ws/install/setup.bash"
+note "  workspace overlay sourced"
+set -u
 note "executables: $(ros2 pkg executables robo_rl_demo 2>&1 | tr '\n' ' ')"
 
 declare -a PIDS=()
@@ -86,7 +101,18 @@ cleanup() {
   for pid in "${PIDS[@]:-}"; do kill "$pid" 2>/dev/null; done
   for pid in "${PIDS[@]:-}"; do wait "$pid" 2>/dev/null; done
 }
-trap cleanup EXIT
+
+# Record any exit that did not come from an explicit FAIL (exit 3 is the
+# deliberate "no ROS 2 here" skip). A silent abort is otherwise invisible in the
+# diagnostics file -- which is how the first two failures presented.
+on_exit() {
+  local rc=$?
+  cleanup
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then
+    note "ABORTED with status $rc before reporting a FAIL (check this step's stderr in the job log)"
+  fi
+}
+trap on_exit EXIT
 
 # --- real nodes ------------------------------------------------------------
 note "starting fake_camera + picker ..."

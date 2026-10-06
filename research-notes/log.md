@@ -78,3 +78,24 @@
 - Note: `ros2_smoke_test.py` exercises nodes in one process; the viewer check is
   the first *cross-process* DDS test in this repo, which is exactly where it
   broke. That distinction is worth remembering.
+
+## 2026-10-06 (late) — Browser-path check: real cause found
+- The PR-comment diagnostics channel paid off immediately. The uploaded
+  diagnostics file ended after two lines:
+      ROS 2 distro: jazzy
+      python: Python 3.12.3, rclpy: /opt/ros/jazzy/lib/python3.12/site-packages/rclpy
+  then nothing — no FAIL line, exit code 1.
+- Cause: `set -u` plus `source /opt/ros/jazzy/setup.bash` and colcon's generated
+  overlay. **ROS 2 / colcon setup scripts are not written for `set -u`**; the
+  first unset variable they reference makes bash abort the entire script with
+  status 1, printing to stderr only (which lands in the job log, not in the
+  diagnostics file). Reproduced locally: exit 1, last note printed, "unbound
+  variable" on stderr.
+  Fix: relax nounset just around those source lines, and assert the overlay
+  exists before sourcing it.
+- Honest correction: my earlier hardening (avoiding `producer | grep -q` under
+  `pipefail`, and `ROS_LOCALHOST_ONLY=1`) was NOT the cause and would not have
+  fixed it. Both are still good practice and stay, but they were guesses —
+  recorded here so the log does not credit the wrong fix.
+- Also added an EXIT trap that records unexpected exit statuses into the
+  diagnostics file, so the next silent abort is visible instead of invisible.
