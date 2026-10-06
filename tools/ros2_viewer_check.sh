@@ -116,8 +116,23 @@ note "resetting the ros2 daemon: $(ros2_cli "$CLI_TIMEOUT" daemon stop | tr '\n'
 
 declare -a PIDS=()
 cleanup() {
-  for pid in "${PIDS[@]:-}"; do kill "$pid" 2>/dev/null; done
-  for pid in "${PIDS[@]:-}"; do wait "$pid" 2>/dev/null; done
+  # Deliberately does NOT `wait` on these PIDs. `ros2 run` wrappers can ignore
+  # SIGTERM, and an unbounded `wait` then blocks forever -- which is exactly how
+  # this script once passed its checks and still sat there until GitHub killed
+  # the step at the 8-minute timeout, turning a success into a red check.
+  local pid
+  for pid in "${PIDS[@]:-}"; do kill -TERM "$pid" 2>/dev/null; done
+  local deadline=$((SECONDS + 3))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    local alive=0
+    for pid in "${PIDS[@]:-}"; do
+      kill -0 "$pid" 2>/dev/null && alive=1
+    done
+    [ "$alive" = "0" ] && break
+    sleep 0.2
+  done
+  for pid in "${PIDS[@]:-}"; do kill -KILL "$pid" 2>/dev/null; done
+  return 0
 }
 on_exit() {
   local rc=$?
@@ -182,6 +197,43 @@ viewer log:
 $(tail -20 "$ARTIFACT_DIR/ros2_viewer.log")"
 fi
 note "  viewer health: $HEALTH"
+
+# --- wait for real DDS delivery before judging the browser ---------------------
+# A freshly started rclpy node needs a moment to discover the publisher. Probing
+# the instant HTTP answers (which can be 0.2s after start) races that discovery
+# and reports a false failure. Wait for the viewer itself to confirm it has
+# received detections, then test the browser path.
+note "waiting for the viewer to receive real DDS traffic (up to ${DDS_WAIT}s) ..."
+DDS_WAIT=${DDS_WAIT:-30}
+DDS_READY=0
+for _ in $(seq 1 "$((DDS_WAIT * 2))"); do
+  DECISIONS="$(curl -sS --max-time 2 "http://127.0.0.1:$PORT/api/state" 2>/dev/null     | python3 -c 'import json,sys
+try:
+    print(json.load(sys.stdin).get("counters", {}).get("decisions", 0))
+except Exception:
+    print(0)' 2>/dev/null)"
+  case "$DECISIONS" in
+    ''|0) ;;
+    *) DDS_READY=1; break ;;
+  esac
+  sleep 0.5
+done
+if [ "$DDS_READY" != "1" ]; then
+  SELFTEST_JSON="$(curl -sS --max-time 3 "http://127.0.0.1:$PORT/api/state" 2>/dev/null     | python3 -c 'import json,sys
+try:
+    state = json.load(sys.stdin)
+except Exception:
+    print("<no state>"); raise SystemExit(0)
+print("selftest:", json.dumps(state.get("selftest")))
+print("graph.transport:", json.dumps((state.get("graph") or {}).get("transport")))
+print("counters:", json.dumps(state.get("counters")))' 2>&1)"
+  fail "the viewer received nothing from DDS within ${DDS_WAIT}s.
+$SELFTEST_JSON
+topic info: $(ros2_cli "$CLI_TIMEOUT" topic info /detected_object | tr '\n' '; ')
+viewer log:
+$(tail -12 "$ARTIFACT_DIR/ros2_viewer.log")"
+fi
+note "  viewer has received DDS traffic (decisions=$DECISIONS)"
 
 # --- drive the browser's own protocol -------------------------------------
 note "probing the browser-facing WebSocket (expecting live DDS data) ..."

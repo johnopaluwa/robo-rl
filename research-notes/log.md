@@ -140,3 +140,22 @@
   Verified the test is not vacuous by reintroducing the bug and watching it fail
   (2 failures), then restoring the fix.
 - UI-contract tests now count 14 (10 + 4 new).
+
+## 2026-10-06 (final) — Two more real bugs: a hanging cleanup and a discovery race
+- The annotation API finally named it: *"The action 'Verify the browser path
+  carries live DDS data' has timed out after 8 minutes."* Meanwhile the PR
+  comment from the very same commit showed the check **passing**:
+  `decisions=3` — real DDS data HAD reached the viewer, over the browser path.
+- Bug A: `cleanup()` ran `wait "$pid"` on `ros2 run` wrappers that ignore
+  SIGTERM. An unbounded `wait` blocked forever, so a script that had already
+  printed PASS sat there until GitHub killed the step — turning a success into a
+  red check. Fix: no `wait` at all; TERM, poll with `kill -0` for 3s, then KILL.
+- Bug B: the script probed the viewer the moment HTTP answered, which can be
+  0.18s after start. A fresh rclpy node needs a moment to discover the publisher,
+  so the probe raced discovery and reported a false failure. Fix: wait until the
+  viewer itself reports it has received DDS traffic (up to 30s) before testing
+  the browser path; if it never does, fail immediately with the self-test,
+  graph.transport and topic info.
+- So the earlier "passing" and "failing" runs were the same code at different
+  timings, and the failure was in my *harness*, not the pipeline. The lesson to
+  keep: a check that can hang or race is a check that lies, in both directions.
