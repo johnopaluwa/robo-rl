@@ -28,6 +28,59 @@ use it only as a refinement step once demo-collection stops improving the
 policy, never as the from-scratch entry point (that path was tried and
 retired; see the tag `pre-pivot-rl-from-scratch`).
 
+## Where compute happens: the data → train → deploy loop
+
+No standing service, nothing runs 24/7. Each step runs where it is cheapest:
+
+| Step | Tool | Runs on | Cost |
+|---|---|---|---|
+| Teleoperate + record demos | `lerobot-teleop`, `lerobot-record` | bench laptop (CPU is fine) | free |
+| Dataset + checkpoint storage | Hugging Face Hub (private repos) | — | free |
+| **Fine-tune** | `lerobot-train` | **a rented GPU, by the hour** — or your own ≥8 GB NVIDIA GPU | ~$0.15–0.70/hr |
+| Evaluate on the bench | `lerobot-record --policy.path=...` | bench laptop | free |
+| Deploy on the arm | policy inference loop | bench laptop / mini PC tethered to the arm | free |
+
+GPU access, in order of preference:
+
+1. **Your own NVIDIA GPU (≥8 GB VRAM)** — if you have one, there is no
+   service at all: `pip install "lerobot[training,smolvla]"` and train
+   locally. (Apple Silicon can train small ACT configs on MPS, but slowly —
+   renting is the sane default for a MacBook.)
+2. **Vast.ai / RunPod** — 2026 medians: RTX 3090 ≈ $0.15/hr, RTX 4090 ≈
+   $0.35–0.70/hr. Rent for the hours a run takes, destroy the pod afterwards.
+   LeRobot resumes from checkpoints (`--resume=true`), so an interruptible
+   spot box is annoying, not fatal.
+3. **Hugging Face Jobs** — the tightest integration: your dataset and
+   checkpoints already live on the Hub, so you submit the same training
+   config and pay per minute (GPUs from ~$0.40/hr). Zero infrastructure.
+
+What a run actually costs: ACT on 50–150 demos ≈ **1–3 GPU-hours** (well
+under $1.50); SmolVLA for 20k steps ≈ 4–8 hours on a 4090 (**$2–4**). A full
+Phase 2 of iterating is therefore *tens of dollars* — the $100–300 GPU line
+in the budget below covers 50+ experiments. (ACT is small enough that
+training it fresh on your demos is equally routine — hours, not days; the
+pretrained-start matters most for SmolVLA/π0.)
+
+Deployment is always local — inference is far cheaper than training. ACT
+runs comfortably on a laptop CPU at SO-101 control rates; if SmolVLA becomes
+the keeper, a used Jetson Orin or a mini PC with a small GPU is the Phase 3
+upgrade. Still no ongoing cloud bill.
+
+## Where MuJoCo went (and when sim comes back)
+
+MuJoCo is **not on the critical path anymore**. RL-from-scratch needed
+millions of simulated attempts; imitation learning needs 50–100 *real*
+teleoperated episodes — the demo dataset replaces the simulator. (The retired
+stack lives under the git tag `pre-pivot-rl-from-scratch`.)
+
+Sim retains two optional uses later:
+
+- **Config pre-flight** — debug a `lerobot-train` config on one of LeRobot's
+  built-in sim environments (Aloha, PushT, community SO-101 MuJoCo envs)
+  before spending bench time or GPU hours.
+- **RL refinement** (Phase 3, optional) — if demo collection stops improving
+  the policy, LeRobot's RL support can refine against the task in sim.
+
 ## Hardware (buy in Phase 0 — this IS the path now)
 
 | Item | Example options | Approx. cost |
