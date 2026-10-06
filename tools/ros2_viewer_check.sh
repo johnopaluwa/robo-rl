@@ -26,11 +26,16 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# All participants are on one machine here. Loopback-only discovery avoids the
-# classic cloud/CI failure where multicast discovery across the VM's network
-# interface never completes, so nodes exist but never see each other.
-# Export ROS_LOCALHOST_ONLY=0 to override if you deliberately need the LAN.
-export ROS_LOCALHOST_ONLY="${ROS_LOCALHOST_ONLY:-1}"
+# All participants are on one machine here. Restricting discovery to the local
+# host avoids the classic cloud/CI failure where multicast discovery across the
+# VM's network interface never completes, so nodes exist but never see each
+# other. ROS_AUTOMATIC_DISCOVERY_RANGE is the current way to express this;
+# ROS_LOCALHOST_ONLY still works but warns on Jazzy, so it is cleared to keep
+# the diagnostics clean. Set DISCOVERY_RANGE=SUBNET to allow the LAN.
+if [ "${DISCOVERY_RANGE:-LOCALHOST}" = "LOCALHOST" ]; then
+  export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+  unset ROS_LOCALHOST_ONLY
+fi
 
 PORT=${PORT:-8123}
 RATE=${RATE:-5.0}

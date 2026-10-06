@@ -117,3 +117,26 @@
   * the CI step has `timeout-minutes: 8` as a backstop;
   * the workflow gained a `concurrency` group with `cancel-in-progress`, so a new
     push supersedes an in-flight run rather than queueing behind a wedged one.
+
+## 2026-10-06 (late, 3) — Found it: a garbage-collected DDS subscription
+- With the hang fixed, CI completed and the PR comment finally showed the full
+  picture. The evidence was beautifully contradictory:
+    ros2 topic hz /detected_object -> average rate: 5.000   (DDS healthy)
+    ros2 node list                 -> /fake_camera /picker /web_viewer
+    ros2 topic info                -> Subscription count: 1  (only the picker)
+    picker log                     -> receiving and deciding normally
+    viewer                         -> published=0 decisions=0, forever
+- Cause: **rclpy's `create_subscription()` returns an object that nothing keeps
+  alive for you.** My RosTransport stored publishers in a dict but threw away
+  the subscription's return value, so Python's GC destroyed the DDS subscription
+  while the node itself stayed in the graph. The node listed; the sub did not.
+- Fix: hold strong references (`self._subscription_objects`).
+- Also: `ros_available()` used `importlib.util.find_spec`, which ignores
+  `sys.modules` stubs *and* can report "available" when the real import would
+  fail (rclpy links native libraries). Now it imports via
+  `importlib.import_module` — more correct, and stubbable.
+- Added `tools/test_transport_lifetime.py`: stubs rclpy/std_msgs so this whole
+  class of bug is catchable **in seconds, in the sandbox that cannot run ROS 2**.
+  Verified the test is not vacuous by reintroducing the bug and watching it fail
+  (2 failures), then restoring the fix.
+- UI-contract tests now count 14 (10 + 4 new).

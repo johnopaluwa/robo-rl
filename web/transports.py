@@ -101,6 +101,15 @@ class RosTransport:
         self._lock = threading.RLock()
         self._subscriptions: Dict[str, List[Subscriber]] = {}
         self._publishers: Dict[str, object] = {}
+        # Strong references to the rclpy objects we create. This is not
+        # housekeeping: create_subscription() returns an object that rclpy does
+        # NOT keep alive for you, so discarding the return value lets Python
+        # garbage-collect it, which tears down the DDS subscription while
+        # leaving the node itself in the graph. The symptom is maddening --
+        # `ros2 topic hz` shows a healthy 5 Hz, the picker receives everything,
+        # `ros2 node list` shows the viewer node, and the viewer sees nothing --
+        # and it cost a CI cycle to find. See tools/test_transport_lifetime.py.
+        self._subscription_objects: List[object] = []
         self._published_count: Dict[str, int] = {}
 
         rclpy.init(args=None)
@@ -132,7 +141,11 @@ class RosTransport:
                     for listener in listeners:
                         listener(message.data)
 
-                self.node.create_subscription(String, topic, _handler, 10)
+                subscription = self.node.create_subscription(
+                    String, topic, _handler, 10
+                )
+                # Keep it alive (see the note in __init__).
+                self._subscription_objects.append(subscription)
             self._subscriptions[topic].append(callback)
 
     def start(self) -> None:
@@ -179,13 +192,21 @@ class RosTransport:
 
 
 def ros_available() -> bool:
-    """Return True when this interpreter can find rclpy, without importing it."""
-    import importlib.util
+    """Return True when this interpreter can actually import rclpy.
+
+    Deliberately imports rather than checking ``find_spec``: a spec can exist
+    while the import still fails (rclpy links native libraries, and a partial
+    install is common), and reporting "available" in that case would make the
+    viewer fail confusingly later. Importing is also what makes this check
+    stubbable in tests -- see tools/test_transport_lifetime.py.
+    """
+    import importlib
 
     try:
-        return importlib.util.find_spec("rclpy") is not None
-    except (ImportError, ValueError):
+        importlib.import_module("rclpy")
+    except Exception:
         return False
+    return True
 
 
 def build_transport(mode: str):
