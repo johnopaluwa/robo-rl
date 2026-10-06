@@ -220,3 +220,21 @@
   GC'd subscription, unbounded CLI calls, hanging cleanup, discovery race,
   use-before-assign). None was found by reading code; all were found by running
   it. That is the argument for the whole verification system, in one sentence.
+
+## 2026-10-06 — Phase 2 simulation foundations (automated implementation/proof run)
+- Added a MuJoCo/Gymnasium tray-loading task for the chosen bakery hypothesis,
+  a position/size/friction/lighting randomizer, a seeded scripted demo, PPO
+  train/eval entry points, and a separate `--simulation` verification path.
+- `PATH="$PWD/.venv/bin:$PATH" ./tools/verify.sh --simulation` passed: seven
+  MuJoCo environment tests and five seeded scripted transfers. The stock
+  Pendulum-v1 PPO sanity run completed 50,176 steps; its 10-episode mean return
+  was -1,030.014 (the exact config, Monitor log and result are in
+  `simulation/results/`).
+- A deliberately short 1,024-step custom-task debug run evaluated 0/3 episodes
+  successfully. It is recorded as a debug result, **not** a learned-policy
+  milestone. The >80% randomized-policy goal remains open.
+- Limitations are explicit: the first arm is Cartesian and uses a virtual grasp
+  constraint; this does not model gripper contact, perception, hardware or
+  sim-to-real behavior. A 163-frame headless diagnostic projection is committed
+  as `simulation/videos/tray-loading-seed7.mp4`; it is not a native 3D render.
+- Customer discovery is still 0/5; no conversations or validation are claimed.
