@@ -1,0 +1,145 @@
+name: verify
+
+# Two jobs, because two different claims need proving:
+#   logic  - the pipeline behaves as documented (no ROS 2 needed, runs anywhere)
+#   ros2   - real ROS 2 / DDS carries messages, and the browser-facing path sees
+#            them (needs a real ROS 2 install, hence the ROS container setup)
+#
+# The ros2 job is the one that makes the ROS 2 milestone publicly verifiable:
+# anyone can open the Actions tab and see whether it is genuinely true, rather
+# than taking a screenshot's word for it. See docs/VERIFICATION.md.
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+  workflow_dispatch:
+
+# One run per branch. A new push supersedes an in-flight run instead of queueing
+# behind it -- so a wedged job can never block the next commit's results, and
+# cannot quietly burn runner time. (`gh run cancel` is not permitted for this
+# integration, so this is the mechanism that keeps hung runs from piling up.)
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  logic:
+    name: Logic proofs (no ROS 2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run verification suite
+        run: ./tools/verify.sh
+
+      - name: Publish summary
+        if: always()
+        run: |
+          {
+            echo "## Verification summary (no ROS 2 needed)"
+            echo
+            if [ -f artifacts/proofs/SUMMARY.md ]; then
+              cat artifacts/proofs/SUMMARY.md
+            else
+              echo "No summary produced -- the suite failed before writing one."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload proof artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofs-logic
+          path: artifacts/proofs/
+          retention-days: 30
+
+  ros2:
+    name: ROS 2 proofs (real DDS)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Official ROS tooling action: installs ROS 2 Jazzy from the ROS apt repo
+      # on the runner (Jazzy targets Ubuntu 24.04 "noble").
+      - name: Set up ROS 2 Jazzy
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: jazzy
+
+      - name: Build the ROS 2 package
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd ros2_ws
+          colcon build --symlink-install --packages-select robo_rl_demo
+
+      - name: Verify with real ROS 2 (this is the milestone proof)
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source ros2_ws/install/setup.bash
+          ./tools/verify.sh --ros2
+
+      - name: Verify the browser path carries live DDS data
+        shell: bash
+        # Backstop: the script bounds every external call, but if something
+        # still wedges, GitHub kills the step and the next one reports the
+        # diagnostics file written so far. A hang must never look like silence.
+        timeout-minutes: 8
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          ./tools/ros2_viewer_check.sh
+
+      # CI logs and artifacts are served from storage that not every environment
+      # can reach, so a failing diagnostic-heavy check also explains itself in
+      # the pull request. The file it reads is written by tools/ros2_viewer_check.sh.
+      - name: Report browser-path diagnostics
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          {
+            echo "### ROS 2 browser-path check failed"
+            echo
+            echo '```text'
+            if [ -f artifacts/proofs/ros2_viewer_diagnostics.txt ]; then
+              tail -c 3500 artifacts/proofs/ros2_viewer_diagnostics.txt
+            else
+              echo "(no diagnostics file was written -- the script failed before it could)"
+            fi
+            echo '```'
+          } > /tmp/diagnostics.md
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body-file /tmp/diagnostics.md \
+            || echo "could not comment on the PR (token permissions?)"
+
+      - name: Publish summary
+        if: always()
+        run: |
+          {
+            echo "## Verification summary (real ROS 2)"
+            echo
+            if [ -f artifacts/proofs/SUMMARY.md ]; then
+              cat artifacts/proofs/SUMMARY.md
+            fi
+            echo
+            python3 tools/summarize_probe.py artifacts/proofs/ros2_viewer_probe.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload proof artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofs-ros2
+          path: artifacts/proofs/
+          retention-days: 30
