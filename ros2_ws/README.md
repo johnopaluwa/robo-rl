@@ -1,7 +1,9 @@
 # ROS 2 workspace
 
-This workspace contains the Phase 1 plumbing exercise: a synthetic camera
-publisher and a picker subscriber. The example uses `std_msgs/String` with a
+This workspace contains the ROS 2 plumbing foundation: a synthetic camera
+publisher and a picker subscriber. Under the fine-tune-first roadmap this is
+the pattern the Phase 3 policy runner will follow — decision logic in a
+ROS-free module, thin rclpy wrappers around it. The example uses `std_msgs/String` with a
 small JSON detection payload, so it needs no custom ROS interface package. The
 picker only logs what it *would* do; there is no robot driver, real camera, or
 motion command here. The item labels are placeholders, not a chosen niche.

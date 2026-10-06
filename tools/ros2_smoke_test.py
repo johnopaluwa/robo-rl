@@ -47,7 +47,7 @@ except Exception as error:  # pragma: no cover - depends on the machine
     print("        cd ros2_ws && colcon build --symlink-install --packages-select robo_rl_demo")
     print("        cd .. && python3 tools/ros2_smoke_test.py")
     print()
-    print("      Until that passes, MILESTONES.md keeps the ROS 2 checkbox unchecked.")
+    print("      Until that passes, docs/ROADMAP.md keeps the ROS 2 checkbox unchecked.")
     raise SystemExit(3)
 
 from robo_rl_demo.detection import Detection  # noqa: E402

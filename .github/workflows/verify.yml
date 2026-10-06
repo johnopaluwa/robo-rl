@@ -62,45 +62,6 @@ jobs:
           path: artifacts/proofs/
           retention-days: 30
 
-  simulation:
-    name: MuJoCo simulation proofs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install the headless simulation runtime
-        run: python -m pip install -r simulation/requirements-sim.txt
-
-      - name: Verify MuJoCo environment, randomization and scripted transfer
-        run: ./tools/verify.sh --simulation
-
-      - name: Publish simulation summary
-        if: always()
-        run: |
-          {
-            echo "## MuJoCo simulation proof"
-            echo
-            if [ -f artifacts/proofs/mujoco_demo.json ]; then
-              cat artifacts/proofs/mujoco_demo.json
-            elif [ -f artifacts/proofs/SUMMARY.md ]; then
-              cat artifacts/proofs/SUMMARY.md
-            else
-              echo "No simulation proof was produced."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload simulation proof artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: proofs-simulation
-          path: artifacts/proofs/
-          retention-days: 30
-
   ros2:
     name: ROS 2 proofs (real DDS)
     runs-on: ubuntu-24.04

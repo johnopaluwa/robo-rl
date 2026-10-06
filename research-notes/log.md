@@ -238,3 +238,43 @@
   sim-to-real behavior. A 163-frame headless diagnostic projection is committed
   as `simulation/videos/tray-loading-seed7.mp4`; it is not a native 3D render.
 - Customer discovery is still 0/5; no conversations or validation are claimed.
+
+## 2026-10-06 — STRATEGY PIVOT: fine-tune first (LeRobot), RL-from-scratch retired
+
+- **The decision:** stop training RL from scratch. The new order of operations
+  is *base model → fine-tune on teleoperated demos → deploy on real hardware →
+  iterate until functional → build the Angular UI last*. This is what most
+  2025/2026 real-world manipulation startups actually do, and it matches where
+  the ecosystem has moved: Hugging Face's **LeRobot** (v0.6.x, 2026) is a
+  complete pipeline — `lerobot-teleop` → `lerobot-record` → `lerobot-train`
+  (fine-tune ACT / SmolVLA / π0) → rollout eval — built for exactly this.
+- **Why the old path was the wrong bet for one part-time founder:** the custom
+  MuJoCo tray env + PPO stack consumed the whole of the old Phase 2 and its
+  best learned-policy result was 0/3 on a short debug run (the 5/5 scripted
+  demo was a controller, not a policy). Fine-tuning ACT or SmolVLA on 50-100
+  demos typically produces a working single-task policy in days on a rented
+  GPU, and hardware now comes in Phase 0 because demos need the real arm.
+- **Deleted from the repo:** the entire `simulation/` stack (MuJoCo tray env,
+  domain randomization, PPO train/eval scripts, results, videos),
+  `tools/test_simulation_domain.py`, the `--simulation` path in
+  `tools/verify.sh`, and the `simulation` CI job. Recoverable via the git tag
+  `pre-pivot-rl-from-scratch` — deleting is not destroying, but it should not
+  sit on the mainline pretending to be the plan.
+- **Docs consolidated:** `MILESTONES.md` + `SKILLS_CHECKLIST.md` merged into
+  `ROADMAP.md` (one plan, checkboxes inline, resources just-in-time — having
+  both a roadmap and a milestones file duplicated every phase twice and they
+  drifted). `TECH_STACK.md` rewritten around the LeRobot stack and the
+  SO-ARM100/101 demo rig bought in Phase 0 (~$300-600, incl. payload
+  reality-check: ~200-250 g, so the v0 task is a scaled-down tray transfer;
+  a real bakery tray needs a bigger arm at the Phase 3 decision point).
+  `VERIFICATION.md` registry updated: RL-from-scratch proofs retired with
+  their final record noted; new Phase 1/2 rows (demo dataset, fine-tune +
+  eval ≥70%) defined with their evidence formats.
+- **What is unchanged:** the bakery-tray niche hypothesis (still 0/5
+  conversations — they now run in parallel with the build, they don't block
+  it), the ROS 2 plumbing (now the pattern for the Phase 3 policy runner),
+  the web viewer (now the spec for the Phase 4 Angular dashboard), the
+  business plan, and the verification culture: no proof, no checkbox.
+- **Next concrete action:** order the SO-ARM101 leader-follower kit + second
+  webcam (see TECH_STACK.md), then `pip install lerobot` and get
+  leader→follower teleop working on the bench.

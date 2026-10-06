@@ -1,5 +1,0 @@
-# Optional policy training/evaluation dependencies.
-# For a small CPU-only install, first install the CPU PyTorch wheel from
-# https://download.pytorch.org/whl/cpu, then install this file; pip will reuse it.
--r requirements-sim.txt
-stable-baselines3>=2.4,<3

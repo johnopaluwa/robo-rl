@@ -1,49 +1,73 @@
 # Tech Stack & Shopping List ($1,000–$5,000 budget)
 
-Principle: spend on the arm + sensor + compute credits, not on anything
-custom. Everything here is off-the-shelf or free/open-source.
+Principle: spend on the arm + sensors + GPU-hours, not on anything custom.
+Everything here is off-the-shelf or free/open-source.
 
-## Software (free)
+**The strategy this serves** ([ROADMAP.md](ROADMAP.md)): fine-tune a
+pretrained policy on teleoperated demos with LeRobot, deploy early, iterate.
+So the shopping list is bought in **Phase 0**, not Phase 3 — demos need the
+real arm from week one.
+
+## Software (free/open-source)
 
 | Layer | Choice | Why |
 |---|---|---|
-| Language | Python 3.11+ (keep your Angular/TS for the dashboard only) | Standard for ML/robotics |
-| Middleware | ROS 2 (Humble or Jazzy LTS) | Industry-standard robot software bus |
-| Simulator | **MuJoCo** (start here) → NVIDIA Isaac Sim later if you need photorealistic perception training | MuJoCo is free, fast, lower hardware requirements; Isaac Sim is heavier but more realistic, better if/when you have cloud GPU budget |
-| RL library | **Stable-Baselines3** (start) → Ray RLlib (scale later) | SB3 is the easiest to actually ship something with, solo |
-| Imitation/VLA shortcut | **LeRobot** (Hugging Face) | Pretrained policies (ACT, diffusion policy) you fine-tune on a handful of demos — often faster to a working result than RL-from-scratch for manipulation |
-| Perception | Pretrained YOLOv8/Ultralytics or Segment Anything variant | Don't train detection from scratch initially |
-| Frontend | Angular + RxJS (your existing stack) | Dashboard/teleop UI — your edge |
-| Bridge | `rosbridge_suite` (WebSocket bridge ROS2 ↔ browser) | Lets Angular talk to ROS 2 without rewriting your frontend stack |
-| Compute | Your existing laptop/PC for dev; **cloud GPU rental** (RunPod, Lambda Labs, Vast.ai, or Google Colab Pro) for heavier training runs | Avoid buying a GPU — renting by the hour is far cheaper at this stage |
+| Language | Python 3.12+ (LeRobot v0.6+ requires it); keep Angular/TS for the dashboard | Standard for ML/robotics |
+| Imitation/VLA stack | **LeRobot** (Hugging Face) — `lerobot-teleop`, `lerobot-record`, `lerobot-train`, `lerobot-eval` | Purpose-built for low-cost arms: teleop → dataset → fine-tune → deploy is one documented pipeline |
+| Policy (start) | **ACT** (fine-tune a pretrained checkpoint) | Fast, best default for precise single-task manipulation; trains on modest GPUs |
+| Policy (step-up) | **SmolVLA** (`lerobot/smolvla_base`, ~450M params) | Language-conditioned VLA that fine-tunes on a single 8 GB GPU in hours; try it when ACT plateaus |
+| Policy (later, data-hungry) | π0 / π0.5 (OpenPI, via LeRobot) | Long-horizon, dexterous tasks; needs far more data than you'll have at first |
+| Datasets & checkpoints | Hugging Face Hub (private repos, free) | Versioned datasets/checkpoints; `lerobot-record` pushes straight there |
+| Middleware | ROS 2 (Jazzy LTS) | Phase 3: policy runner as a node; hardware integration; already proved in this repo's CI |
+| Bridge | `rosbridge_suite` (WebSocket, ROS 2 ↔ browser) | Phase 4: lets Angular talk to ROS 2 without leaving your stack |
+| Frontend | Angular + RxJS | Phase 4 dashboard/teleop UI — your edge |
+| Compute | Your laptop/PC for teleop + recording (CPU is fine); **rented cloud GPU** for fine-tuning — RunPod, Vast.ai, Lambda Labs, or Hugging Face Jobs | Don't buy a GPU. ACT/SmolVLA fine-tuning fits an 8 GB card (RTX 4060/3090 class, ~$0.30-0.70/hr) |
 
-## Hardware (buy in Phase 3, not before)
+**RL (for later, if ever):** LeRobot also ships RL support — the plan is to
+use it only as a refinement step once demo-collection stops improving the
+policy, never as the from-scratch entry point (that path was tried and
+retired; see the tag `pre-pivot-rl-from-scratch`).
 
-Budget allocation suggestion within $1,000–5,000:
+## Hardware (buy in Phase 0 — this IS the path now)
 
 | Item | Example options | Approx. cost |
 |---|---|---|
-| Robot arm | SO-ARM100 (~$200, very low cost, popular in the LeRobot community) **or** Elephant Robotics myCobot 280 (~$1,500-2,000) **or** UFACTORY Lite 6 (~$2,000-3,000, more industrial-grade) | $200 – $3,000 |
-| Depth camera | Intel RealSense D435/D455 | $300 – $450 |
-| Gripper/end-effector | Start with the arm's stock gripper; add a basic adaptive/suction gripper later if your task needs it | $0 – $500 |
-| Mounting/rig | Basic tripod/table clamp, 3D-printed fixtures (print at a local library/makerspace if you don't own a printer) | $50 – $150 |
-| Compute buffer | Cloud GPU credits for training runs | $100 – $500 |
-| Contingency | Cables, power supplies, mistakes | $100 – $300 |
+| Robot arm pair | **SO-ARM100/SO-101 leader + follower kit** — WowRobo SO-ARM101 (~€430-530, incl. camera), Seeed SO-ARM101 motor kit (~€350, add 3D-printed parts), or self-sourced STS3215 servos + printed frame (~$150-250). SO-101 is the LeRobot community default in 2026 with first-class config support | $200 – $550 |
+| Cameras | 2× USB webcams (e.g. Logitech C920/C922) — one over-the-shoulder, one side/wrist view; kits often include one | $0 – $140 |
+| Spares | 1-2 spare STS3215 servos, spare gripper parts | $30 – $60 |
+| Mounting/rig | Table clamps (usually included), camera stands, 3D-printed fixtures (makerspace/library if you don't print) | $30 – $100 |
+| Task props | Scaled trays/sheets + marker targets for the v0 task (see payload note below) | $20 – $50 |
+| Power & cables | Supplied PSU + powered USB hub (2 cameras + 2 arms on one bus is asking for brownouts) | $20 – $50 |
+| Compute buffer | Cloud GPU credits for fine-tuning runs | $100 – $300 |
+| Contingency | Shipping/duties, mistakes | $100 – $200 |
 
-**Recommended starting combo on a tight budget:** SO-ARM100 (~$200) +
-RealSense camera (~$350) + cloud GPU credits (~$300) leaves most of a
-$1,000-2,000 budget as buffer — and SO-ARM100 has first-class support in the
-LeRobot ecosystem, which matters more than raw arm payload/precision at the
-prototype stage.
+**Recommended starter combo:** a SO-ARM101 leader-follower kit with camera
+(~€450) + one extra webcam (~$70) + powered USB hub + props (~$50) + GPU
+credits ($150) ≈ **$800-900 total** — comfortably inside even the low end of
+the budget, with the rest held for the Phase 3 scale-up decision.
 
-If your chosen niche needs more payload/reach/precision (e.g. heavier
-warehouse totes), step up to the myCobot 280 or UFACTORY Lite 6 instead, and
-trim the contingency buffer.
+### Payload reality check (read before buying anything bigger)
 
-## What NOT to buy yet
-- No industrial cobot (UR, ABB, Fanuc) — save that for after a paying pilot,
-  lease/finance it then.
-- No dedicated workstation GPU — rent cloud compute instead.
-- No custom PCBs/electronics — use the arm's stock controller and off-the-
-  shelf cameras/compute (a mini PC or even your laptop tethered is fine
-  for a pilot).
+SO-ARM100/101 lifts roughly **200-250 g**. A full-size 60×40 cm bakery tray
+is heavier than that *empty*. This is deliberate, not a mistake:
+
+- v0 task (Phases 1-2) is a **scaled-down** tray/sheet transfer — the goal is
+  to prove the *loop* (demos → fine-tune → deploy → iterate), not the final
+  payload.
+- Once the loop works and the interviews confirm the niche, the Phase 3
+  decision point is: real tray format → step up to an arm like the
+  Elephant Robotics myCobot 280 (~$1,500-2,000) or UFACTORY Lite 6
+  (~$2,000-3,000), funded from remaining budget/pilot revenue.
+- Don't buy the bigger arm before that decision has real data behind it.
+
+## What NOT to buy (yet)
+
+- **No dedicated workstation GPU** — rent by the hour; fine-tuning fits small
+  cloud cards.
+- **No industrial cobot** (UR, ABB, Fanuc) — lease/finance only after a
+  paying pilot.
+- **No custom PCBs/electronics** — stock controllers, stock cameras.
+- **No depth camera yet** — a RealSense D435/D455 ($300-450) joins in Phase 3
+  *if* the task turns out to need depth; 2 plain webcams are what ACT/SmolVLA
+  fine-tunes in the LeRobot community consume happily.
+- **No second arm type** "to compare" — one rig, one task, until it works.
