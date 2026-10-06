@@ -5,11 +5,17 @@ progress log and doubles as fundraising/pitch material later. Dates are
 targets from whenever you start (Week 1 = your actual start date), based on
 ~15-20 hrs/week.
 
+**Progress note (2026-10-06):** A generic ROS 2 publisher/subscriber example
+and standard-library tests now exist under `ros2_ws/src/robo_rl_demo`. Keep the
+"Built a toy ROS 2 publisher/subscriber pair" checkbox unchecked until the
+package has been built and both nodes have been run in a sourced ROS 2
+environment; ROS 2 is not installed in the current development container.
+
 ## Phase 0 — Niche Lock & Groundwork (Weeks 1-4)
 - [ ] Chosen specific task written down in README.md ("I'm building a robot that...")
 - [ ] 5 business owner/facility manager conversations completed, notes in research-notes/
 - [ ] Dev environment set up (Python, Git habit, repo structure)
-- [ ] research-notes/log.md started
+- [x] research-notes/log.md started
 
 ## Phase 1 — Python, Math, ROS 2 (Months 1-4)
 - [ ] Comfortable writing Python scripts without heavy LLM scaffolding

@@ -9,6 +9,11 @@ This repo is the working home for that project: the plan, the learning log,
 the simulation code, the ROS 2 workspace, and the Angular fleet/control
 dashboard that is your unfair advantage.
 
+**Current task:** not selected yet. Use the Phase 0 customer-discovery
+conversations to choose one narrow, evidence-backed task before specializing
+the simulation or buying hardware. Capture conversations with the
+[interview template](research-notes/customer-discovery-template.md).
+
 ## Start here
 
 1. **[docs/ROADMAP.md](docs/ROADMAP.md)** — the 18-month plan, phase by phase.
