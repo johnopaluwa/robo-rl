@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   logic:
@@ -85,6 +86,30 @@ jobs:
         run: |
           source /opt/ros/jazzy/setup.bash
           ./tools/ros2_viewer_check.sh
+
+      # CI logs and artifacts are served from storage that not every environment
+      # can reach, so a failing diagnostic-heavy check also explains itself in
+      # the pull request. The file it reads is written by tools/ros2_viewer_check.sh.
+      - name: Report browser-path diagnostics
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          {
+            echo "### ROS 2 browser-path check failed"
+            echo
+            echo '```text'
+            if [ -f artifacts/proofs/ros2_viewer_diagnostics.txt ]; then
+              tail -c 3500 artifacts/proofs/ros2_viewer_diagnostics.txt
+            else
+              echo "(no diagnostics file was written -- the script failed before it could)"
+            fi
+            echo '```'
+          } > /tmp/diagnostics.md
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body-file /tmp/diagnostics.md \
+            || echo "could not comment on the PR (token permissions?)"
 
       - name: Publish summary
         if: always()

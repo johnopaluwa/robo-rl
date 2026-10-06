@@ -45,7 +45,10 @@ fail() {
   # GitHub annotation: newlines must be percent-escaped to stay on one line.
   local escaped
   escaped=$(printf '%s' "$*" | sed ':a;N;$!ba;s/\n/%0A/g' | cut -c1-4000)
-  echo "::error::${escaped}"
+  # Anchored to a file: unanchored annotations are not always returned by the
+  # check-runs annotations API, and that API is the only reliable way to read a
+  # failure from an environment that cannot reach the job-log storage.
+  echo "::error file=tools/ros2_viewer_check.sh,line=1::${escaped}"
   exit 1
 }
 
