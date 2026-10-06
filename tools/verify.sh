@@ -14,7 +14,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 
 PACKAGE_ROOT="ros2_ws/src/robo_rl_demo"
 ARTIFACT_DIR="artifacts/proofs"
@@ -31,8 +31,8 @@ for arg in "$@"; do
   esac
 done
 
-BOLD=$'\033[1m'; DIM=$'\033[2m'; GREEN=$'\033[32m'; RED=$'\033[31m'
-YELLOW=$'\033[33m'; CYAN=$'\033[36m'; RESET=$'\033[0m'
+BOLD=$'\033[1m'; GREEN=$'\033[32m'; RED=$'\033[31m'
+YELLOW=$'\033[33m'; RESET=$'\033[0m'
 
 declare -a NAMES STATUS TRANSPORT DETAIL
 FAILED=0
@@ -61,7 +61,6 @@ fi
 # ------------------------------------------------------- 2. headless pipeline
 step_header "Headless pipeline proof (no ROS 2 needed)"
 if python3 tools/proof_pipeline.py --artifact-dir "$ARTIFACT_DIR"; then
-  VERDICT=$(python3 -c "import json;print(json.load(open('$ARTIFACT_DIR/pipeline_proof.json'))['verdict'])")
   record "pipeline logic proof" PASS "(sim)" "transport=in-process -> pipeline_proof.json"
 else
   record "pipeline logic proof" FAIL "(sim)" "see pipeline_proof.json"
@@ -123,7 +122,12 @@ fi
 
 # ------------------------------------------------- 3b. Phase 0 evidence (docs)
 step_header "Phase 0 evidence (customer discovery happens outside the terminal)"
-INTERVIEWS=$(ls research-notes/interviews/*.md 2>/dev/null | grep -viE 'readme|template' | wc -l | tr -d ' ')
+if [ -d research-notes/interviews ]; then
+  INTERVIEWS=$(find research-notes/interviews -maxdepth 1 -name '*.md' \
+    ! -iname 'readme*' ! -iname '*template*' 2>/dev/null | wc -l | tr -d ' ')
+else
+  INTERVIEWS=0
+fi
 INTERVIEWS=${INTERVIEWS:-0}
 if grep -q "I'm building a robot that" README.md 2>/dev/null; then
   echo "  ${GREEN}PASS${RESET} README states the chosen task"

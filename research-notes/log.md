@@ -159,3 +159,19 @@
 - So the earlier "passing" and "failing" runs were the same code at different
   timings, and the failure was in my *harness*, not the pipeline. The lesson to
   keep: a check that can hang or race is a check that lies, in both directions.
+
+## 2026-10-06 (last) — Guard against the bug I kept repeating
+- The latest abort was mine again and in the same shape as the ROS 2 one:
+  `note "... ${DDS_WAIT}s"` sat one line ABOVE `DDS_WAIT=${DDS_WAIT:-30}`, so
+  `set -u` aborted the script silently. Assign before use.
+- Installed shellcheck (bundled binary from PyPI, works in this sandbox) and
+  cleaned every warning: `cd || exit`, unused colour vars, `ls | grep`, and a
+  `find` redirection. Shellcheck is now clean at warning level.
+- Important caveat discovered: **shellcheck does NOT catch use-before-assign**
+  (the variable is assigned, just later in the file). So I wrote
+  `tools/test_shell_scripts.py` specifically for it: it parses each tools/*.sh,
+  records first-assignment line and every `${VAR}`/`$VAR` use, and fails if a
+  name is used before the line that assigns it. Verified it catches the live
+  `DDS_WAIT` bug (flagged line 206 used, assigned 207) and stays silent on the
+  correct ordering. Names never assigned are ignored, since those are env vars.
+- tools tests now 20 (16 contract/lifetime + 4 shell guards).

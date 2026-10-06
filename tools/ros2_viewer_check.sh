@@ -24,7 +24,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 
 # All participants are on one machine here. Restricting discovery to the local
 # host avoids the classic cloud/CI failure where multicast discovery across the
@@ -46,7 +46,7 @@ ARTIFACT_DIR="artifacts/proofs"
 mkdir -p "$ARTIFACT_DIR"
 DIAG="$ARTIFACT_DIR/ros2_viewer_diagnostics.txt"
 
-GREEN=$'\033[32m'; RED=$'\033[31m'; YELLOW=$'\033[33m'; RESET=$'\033[0m'
+GREEN=$'\033[32m'; YELLOW=$'\033[33m'; RESET=$'\033[0m'
 
 : >"$DIAG"
 note() { echo "$*" | tee -a "$DIAG"; }
@@ -203,8 +203,8 @@ note "  viewer health: $HEALTH"
 # the instant HTTP answers (which can be 0.2s after start) races that discovery
 # and reports a false failure. Wait for the viewer itself to confirm it has
 # received detections, then test the browser path.
-note "waiting for the viewer to receive real DDS traffic (up to ${DDS_WAIT}s) ..."
 DDS_WAIT=${DDS_WAIT:-30}
+note "waiting for the viewer to receive real DDS traffic (up to ${DDS_WAIT}s) ..."
 DDS_READY=0
 for _ in $(seq 1 "$((DDS_WAIT * 2))"); do
   DECISIONS="$(curl -sS --max-time 2 "http://127.0.0.1:$PORT/api/state" 2>/dev/null     | python3 -c 'import json,sys
