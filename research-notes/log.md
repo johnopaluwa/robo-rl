@@ -1,5 +1,37 @@
 # Build Log
 
+## 2026-10-06 (Phase 0) — Niche chosen: bakery tray loading/unloading
+- Milestone "chosen specific task written down in README.md" is now ticked.
+  The README states: *"I'm building a robot that loads and unloads baking
+  trays at small and mid-sized bakeries, because that task is monotonous,
+  physically hard, and the people who do it are increasingly impossible to
+  hire."*
+- **Why this task, desk-researched (to be confirmed/killed by 5 real
+  conversations — this is a hypothesis, not evidence):**
+  - Fits every Phase 0 criterion in ROADMAP.md and BUSINESS_PLAN.md: dull and
+    physically hard (staff quit it), bolts onto existing rack-trolley/tray
+    infrastructure, small-business customers with a real staffing pain.
+  - Market validation without inventing demand: WP Kemper's ROBOMATIC sells
+    exactly this interface (https://www.wp-l.de/en/artisan-bread-roll-lines/automatic-tray-loading-robot-robomatic.html),
+    Malzers bakery runs six robots for tray/sheet loading
+    (https://drivesncontrols.com/robots-earn-their-crust-in-german-bakery/),
+    and Chef Robotics now offers baked-goods tray packing **as RaaS in Germany**
+    (https://www.roboticstomorrow.com/news/2026-04-29/chef-robotics-physical-ai-models-can-now-automate-baked-goods-packing/26501/)
+    — but aimed at larger food plants, leaving small/mid bakeries unserved.
+  - Local fit: Saxony-Anhalt has an aging workforce with 27% of firms
+    reporting recruitment difficulties (https://www.ainvest.com/news/saxony-anhalt-2026-industrial-tech-expansion-strategic-opportunity-early-stage-investors-2512/),
+    and bakery density near Magdeburg is high.
+- **Alternatives considered and parked:** single-stream recycling sorting
+  (crowded field: AMP, BHS, Waste Robotics, TOMRA; industrial-scale sites),
+  manufacturing defect sorting (often vision-only, weaker case for an arm),
+  e-commerce bin picking (highest grasping variance — wrong first task).
+- **What this does NOT prove:** that any bakery will host a pilot, what
+  "good enough" throughput means to them, or which tray/trolley formats
+  dominate. That is exactly what the next milestone (5 conversations,
+  prospects list in research-notes/prospects.md) exists to answer.
+- `./tools/verify.sh` → "Phase 0: niche chosen in README" is PASS; the 0/5
+  conversations row remains PENDING.
+
 ## Week 1
 - Started the robo-rl roadmap.
 
