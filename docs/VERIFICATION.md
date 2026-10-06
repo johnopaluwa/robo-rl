@@ -9,6 +9,11 @@ not evidence. This file is the registry of *how* each milestone is proved, and
 ./tools/verify.sh          # everything verifiable without ROS 2
 ./tools/verify.sh --ros2   # + real ROS 2 check (fails loudly if rclpy is missing)
 python3 web/server.py      # watch the pipeline decide things, live in a browser
+
+# no ROS 2 on this machine? two free ways to get a real one:
+#   Codespaces  -> .devcontainer/ provisions ROS 2 Jazzy and runs the suite
+#   GitHub Actions -> .github/workflows/verify.yml proves it on every push
+# see docs/ROS2_ANYWHERE.md for costs, limits, and what each one actually proves
 ```
 
 ## Evidence tiers
@@ -23,6 +28,10 @@ credibility from lower ones.
 | **T3 — live demo** | `web/server.py` + `tools/ws_probe.py` | the running system, live protocol, commands | that ROS 2 is involved (unless `--mode ros2`) |
 | **T4 — real ROS 2** | `tools/ros2_smoke_test.py` | rclpy pub/sub, schema on the wire, commands change real node state | physical hardware |
 | **T5 — physical** | raw video of the arm on your bench | that it works in the real world | scaling, reliability over weeks |
+
+Cloud ROS 2 counts as **T4**, not as a lower tier: Codespaces and CI run a real
+ROS 2 runtime with real DDS. It is a real machine, just not yours. What it still
+cannot do is touch hardware.
 
 **Hard rule:** T1–T3 results are labelled `(sim)` and may never tick a milestone
 whose text names ROS 2 or hardware. `tools/verify.sh` enforces this by keeping
@@ -78,6 +87,9 @@ conversation is the notes you wrote down; the script only checks that they exist
 | Linear algebra + probability primer | not mechanically provable — evidence is notes in `research-notes/` | n/a | **NOT VERIFIED** |
 | ROS 2 beginner tutorials completed | not mechanically provable — evidence is `research-notes/log.md` entries | n/a | **NOT VERIFIED** |
 | Toy ROS 2 publisher/subscriber pair | `tools/ros2_smoke_test.py`: real nodes, real DDS, observer node, command round-trip | `./tools/verify.sh --ros2` | **NOT VERIFIED** (needs ROS 2 machine) |
+| …the same, in a free cloud box | Codespaces devcontainer runs the suite on creation | `.devcontainer/` session | **READY** (see [ROS2_ANYWHERE.md](ROS2_ANYWHERE.md)) |
+| …the same, automatically and publicly | CI job `ros2`: setup-ros jazzy, build, `verify.sh --ros2`, browser probe | push → Actions tab | **READY** (first run pending) |
+| Browser sees live DDS, not a sim | `tools/ros2_viewer_check.sh` runs the real nodes + viewer and probes `/ws` with `--expect-ros2` | `./tools/ros2_viewer_check.sh` | **READY** (needs ROS 2 machine) |
 | PyTorch blitz | not mechanically provable — artifact would be a training script in `simulation/train/` | n/a | **NOT VERIFIED** |
 
 The ROS 2 row is the one that matters most right now. It stays unchecked until
@@ -138,6 +150,8 @@ From the last `./tools/verify.sh` run in this sandbox (no ROS 2 available):
 
 | proof | transport | status |
 | --- | --- | --- |
+| Cloud ROS 2 in CI (`ros2` job) | (ros2) | **READY — runs on push** |
+| Codespaces devcontainer suite | (ros2) | **READY — runs on create** |
 | unit tests (21) | python 3 | **PASS** |
 | pipeline logic proof (16 checks) | (sim) | **PASS** |
 | live viewer + WebSocket command round-trip | (sim) | **PASS** |
@@ -164,9 +178,14 @@ milestone. That is the point of the table.
 - **`artifacts/` is gitignored.** Proofs are reproducible, not committed, so
   nothing rots. If you want a proof in the repo, commit the script that
   regenerates it, not the output.
-- **No CI yet.** When you have a GitHub Actions runner, `./tools/verify.sh`
-  becomes the CI job (skip the `--ros2` step there, or self-host a runner on
-  your ROS 2 machine later).
+- **The CI workflow and devcontainer have not been executed yet.** They were
+  written in a container without Docker or ROS 2, so their first run in Actions /
+  Codespaces is the real test. That is stated here rather than hidden: an
+  unverified claim should be visible, and a red run is information.
+- **`colcon test` is deliberately not in CI.** The package's tests are run
+  directly by `verify.sh` under the ROS 2 environment; wiring `colcon test` adds
+  a pytest dependency that could not be verified from here. Add it once you can
+  watch it run.
 - **The sim's grasp model is a teaching model**, not a policy: `simulate_grasp`
   is a probability curve, not physics. It exists so the confidence/threshold
   trade-off is visible, and it is labelled as such in the code and the UI.

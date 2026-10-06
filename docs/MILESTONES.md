@@ -48,7 +48,11 @@ Current verified status (this container has no ROS 2):
       *proof:* dated entries in research-notes/log.md
 - [ ] Built a toy ROS 2 publisher/subscriber pair from scratch
       *proof:* `./tools/verify.sh --ros2` → real DDS pub/sub, schema on the wire,
-      and commands that change real node state (`tools/ros2_smoke_test.py`)
+      and commands that change real node state (`tools/ros2_smoke_test.py`).
+      No ROS 2 locally? Two free paths, both already configured:
+      Codespaces (`.devcontainer/`, runs the suite on create) or CI
+      (`.github/workflows/verify.yml`, runs on every push and is public).
+      See docs/ROS2_ANYWHERE.md.
 - [ ] Completed PyTorch 60-minute blitz; trained a basic model end to end
       *proof:* a training script under simulation/train/ that runs headless
 

@@ -135,6 +135,11 @@ def main(argv=None) -> int:
     parser.add_argument("--path", default="/ws")
     parser.add_argument("--seconds", type=float, default=3.0, help="observation window")
     parser.add_argument("--json", help="write the collected frames to this file")
+    parser.add_argument(
+        "--expect-ros2",
+        action="store_true",
+        help="fail unless the viewer is in real ROS 2 mode and receiving live detections",
+    )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(argv)
 
@@ -219,6 +224,22 @@ def main(argv=None) -> int:
     if last.get("mode") == "sim":
         checks.append(
             ("sim mode self-reports as not-the-real-thing", last.get("is_real_ros") is False)
+        )
+    if args.expect_ros2:
+        checks.append(
+            (
+                "viewer is in real ROS 2 mode, not a simulation",
+                last.get("mode") == "ros2" and last.get("is_real_ros") is True,
+            )
+        )
+        counters = last.get("counters", {})
+        checks.append(
+            (
+                f"real detections reached the picker over DDS "
+                f"(decisions={counters.get('decisions', 0)}, "
+                f"published={counters.get('published', 0)})",
+                counters.get("decisions", 0) > 0,
+            )
         )
 
     say("")

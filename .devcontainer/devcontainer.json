@@ -1,0 +1,30 @@
+{
+  "name": "robo-rl (ROS 2 Jazzy)",
+  // Official OSRF ROS 2 image: rclpy, the ros2 CLI and colcon are already there,
+  // so Codespaces gives you a real ROS 2 machine in the browser, free
+  // (personal accounts include 120 core-hours/month; a 2-core box = ~60 hours).
+  "image": "ros:jazzy-ros-base",
+  "postCreateCommand": "bash tools/devcontainer_setup.sh",
+  // The viewer is served here; Codespaces forwards it and gives you a URL.
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "robo-rl viewer",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-iot.vscode-ros"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  // The ROS image is Ubuntu 24.04 "noble" with ROS 2 Jazzy, matching CI.
+  "remoteUser": "root"
+}

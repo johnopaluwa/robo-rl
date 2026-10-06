@@ -92,6 +92,17 @@ if [ "$READY" = "1" ]; then
   else
     record "live viewer + ws commands" FAIL "(sim)" "see ws_probe.json"
   fi
+
+  # Guard: the ROS 2 assertion must actually discriminate. A claim-check that
+  # passes against a simulation would be worse than no check at all, so prove
+  # here that demanding ROS 2 evidence fails when only simulation exists.
+  if python3 tools/ws_probe.py --port "$PORT" --seconds 3 --expect-ros2 --quiet >/dev/null 2>&1; then
+    echo "  ${RED}FAIL${RESET} --expect-ros2 accepted simulation data; the honesty check is broken"
+    record "honesty guard: sim rejected as ROS 2" FAIL "(sim)" "--expect-ros2 passed on a simulation"
+  else
+    echo "  ${GREEN}PASS${RESET} --expect-ros2 correctly refuses simulation-only evidence"
+    record "honesty guard: sim rejected as ROS 2" PASS "(sim)" "--expect-ros2 fails on sim, as it must"
+  fi
 else
   echo "  ${RED}server did not become ready${RESET}; see $SERVER_LOG"
   record "live viewer + ws commands" FAIL "(sim)" "server never became ready"

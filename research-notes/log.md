@@ -29,3 +29,26 @@
   subscribed in sim mode, and objects were registered *after* publishing, so
   decisions could not find their object. Both fixed; both now covered by the
   checks that caught them.
+
+## 2026-10-06 (evening) — Free ways to run real ROS 2 in the cloud
+- Investigated whether ROS 2 can be run "in the cloud for free". Findings:
+  AWS RoboMaker is discontinued (end of support 2025-09-10) and Google Cloud
+  Robotics is gone; Foxglove/rosbridge only *visualise* a runtime, they are not
+  one. The two options that actually give a real ROS 2 runtime for free are
+  GitHub Codespaces (120 core-hrs/mo, ~60h on 2 cores) and GitHub Actions
+  (unlimited minutes on public repos).
+- Added `.devcontainer/` (official ros:jazzy-ros-base image, port 8000
+  forwarded, runs the verification suite on creation) so a real ROS 2 box is one
+  click away, and `tools/devcontainer_setup.sh` to provision + prove it.
+- Added `.github/workflows/verify.yml`: a `logic` job (no ROS 2) and a `ros2`
+  job that installs Jazzy, builds the package, runs `verify.sh --ros2` and the
+  new `tools/ros2_viewer_check.sh`. The ROS 2 claim is now publicly checkable by
+  anyone via the badge, instead of resting on a screenshot.
+- Added `tools/ros2_viewer_check.sh`: real nodes -> viewer in --mode ros2 ->
+  browser WebSocket protocol, asserting the browser really receives live DDS.
+- Added `--expect-ros2` to the probe, plus a permanent guard in verify.sh that
+  FAILS if `--expect-ros2` ever passes against a simulation. The guard is there
+  because the first version of the flag silently did nothing and reported PASS —
+  a claim-check that cannot fail is worse than no check.
+- Remaining honest caveat: the workflow and devcontainer were written in a
+  container without Docker or ROS 2, so their first real run is in CI.
