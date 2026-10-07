@@ -6,10 +6,9 @@ not evidence. This file is the registry of *how* each milestone is proved, and
 `tools/verify.sh` is the thing you actually run.
 
 ```bash
-./tools/verify.sh            # proofs that need neither ROS 2 nor MuJoCo
-./tools/verify.sh --simulation # require Gymnasium/MuJoCo; run Phase 2 tests + demo
-./tools/verify.sh --ros2       # + real ROS 2 check (fails loudly if rclpy is missing)
-python3 web/server.py          # watch the pipeline decide things, live in a browser
+./tools/verify.sh            # proofs that need neither ROS 2 nor hardware
+./tools/verify.sh --ros2     # + real ROS 2 check (fails loudly if rclpy is missing)
+python3 web/server.py        # watch the pipeline decide things, live in a browser
 
 # no ROS 2 on this machine? two free ways to get a real one:
 #   Codespaces  -> .devcontainer/ provisions ROS 2 Jazzy and runs the suite
@@ -25,10 +24,10 @@ credibility from lower ones.
 | Tier | What it is | What it proves | What it cannot prove |
 | --- | --- | --- | --- |
 | **T1 — unit tests** | `unittest`, no ROS needed | parsing, validation, thresholds, wording | integration of any kind |
-| **T2 — reproducible simulation/proofs** | `tools/proof_pipeline.py` and `tools/verify.sh --simulation` → `artifacts/proofs/*.json` | pipeline logic, MuJoCo task/reset/reward/randomization and seeded sim eval | ROS 2/DDS, physical gripper contact, or sim-to-real behavior |
+| **T2 — reproducible headless proofs** | `tools/proof_pipeline.py` → `artifacts/proofs/*.json` | pipeline logic, command schema, thresholds | ROS 2/DDS, physical gripper contact, or real-world behavior |
 | **T3 — live demo** | `web/server.py` + `tools/ws_probe.py` | the running system, live protocol, commands | that ROS 2 is involved (unless `--mode ros2`) |
 | **T4 — real ROS 2** | `tools/ros2_smoke_test.py` | rclpy pub/sub, schema on the wire, commands change real node state | physical hardware |
-| **T5 — physical** | raw video of the arm on your bench | that it works in the real world | scaling, reliability over weeks |
+| **T5 — physical / real-robot evidence** | raw video, dataset/checkpoint/eval records from the bench | that it works in the real world | scaling, reliability over weeks |
 
 Cloud ROS 2 counts as **T4**, not as a lower tier: Codespaces and CI run a real
 ROS 2 runtime with real DDS. It is a real machine, just not yours. What it still
@@ -39,7 +38,7 @@ whose text names ROS 2 or hardware. `tools/verify.sh` enforces this by keeping
 the ROS 2 row `NOT VERIFIED` until the smoke test actually passes on a machine
 with ROS 2 installed.
 
-## Why simulation is still worth doing
+## Why the viewer's sim mode is still worth having
 
 The web viewer and the ROS 2 nodes share **one** implementation of behaviour:
 `ros2_ws/src/robo_rl_demo/robo_rl_demo/pipeline.py`. The nodes are thin wrappers
@@ -66,71 +65,79 @@ the proof fails.
 ## The registry
 
 Status column reflects reproducible commands. The base interpreter here has no
-ROS 2 or MuJoCo; Phase 2 was also run explicitly in an optional-dependency venv
-with `./tools/verify.sh --simulation`. `MILESTONES.md` is the checkbox tracker;
-this is the proof tracker.
+ROS 2. `docs/ROADMAP.md` holds the plan and its checkboxes; this file is the
+proof tracker — what each milestone's evidence actually is.
 
-### Phase 0 — Niche lock
+### Phase 0 — Niche lock & demo rig
 
 | Milestone | Proof | Command | Status |
 | --- | --- | --- | --- |
 | Chosen task written in README | README contains the mission sentence | `./tools/verify.sh` (Phase 0 row) | **PASS** (bakery tray loading; still a hypothesis pending interviews) |
 | 5 customer conversations | one file per conversation in `research-notes/interviews/`, counted by the script | `./tools/verify.sh` (Phase 0 row) | **PENDING (0/5)** |
+| Demo rig ordered & teleoperating | dated order note + bench video of leader→follower teleop in `research-notes/log.md` | n/a (upload evidence to `log.md`) | NOT VERIFIED |
 | Dev environment set up | repo builds, tests run | `./tools/verify.sh` | **PASS** |
 | `research-notes/log.md` started | file exists and is non-empty | `test -s research-notes/log.md` | **PASS** |
 
 Phase 0 is deliberately not automatable beyond counting files. The proof of a
 conversation is the notes you wrote down; the script only checks that they exist.
 
-### Phase 1 — Python, math, ROS 2
+### Foundations — Python & ROS 2 plumbing (proved; used again in Phase 3)
+
+These were built under the old plan's "Phase 1" and remain live infrastructure:
+the same nodes/wrappers are the pattern the Phase 3 policy runner will follow.
 
 | Milestone | Proof | Command | Status |
 | --- | --- | --- | --- |
-| Python without heavy LLM scaffolding | `pipeline.py` has no ROS import, is type-annotated, and 21 tests pass | `./tools/verify.sh` | **PASS** |
-| Linear algebra + probability primer | not mechanically provable — evidence is notes in `research-notes/` | n/a | **NOT VERIFIED** |
-| ROS 2 beginner tutorials completed | not mechanically provable — evidence is `research-notes/log.md` entries | n/a | **NOT VERIFIED** |
+| Python without heavy LLM scaffolding | `pipeline.py` has no ROS import, is type-annotated, and its tests pass | `./tools/verify.sh` | **PASS** |
 | Toy ROS 2 publisher/subscriber pair | `tools/ros2_smoke_test.py`: real nodes, real DDS, observer node, command round-trip | `./tools/verify.sh --ros2` | **VERIFIED in CI** ([run 37474982123](https://github.com/johnopaluwa/robo-rl/actions/runs/37474982123), ROS 2 Jazzy) |
 | …the same, in a free cloud box | Codespaces devcontainer runs the suite on creation | `.devcontainer/` session | **READY** (see [ROS2_ANYWHERE.md](ROS2_ANYWHERE.md)) |
 | …the same, automatically and publicly | CI job `ros2`: setup-ros jazzy, build, `verify.sh --ros2`, browser probe | push → Actions tab | **VERIFIED in CI** (runs 37474982123 and 37490542247) |
 | Browser sees live DDS, not a sim | `tools/ros2_viewer_check.sh` runs the real nodes + viewer and probes `/ws` with `--expect-ros2` | `./tools/ros2_viewer_check.sh` | **VERIFIED in CI** ([run 37490542247](https://github.com/johnopaluwa/robo-rl/actions/runs/37490542247), real detections reached the browser) |
-| PyTorch blitz | not mechanically provable — artifact would be a training script in `simulation/train/` | n/a | **NOT VERIFIED** |
 
 The ROS 2 smoke test passes in CI on real ROS 2 Jazzy/DDS. In a local
 interpreter without ROS 2, `verify.sh` still reports it as **NOT VERIFIED HERE**;
 that local result does not invalidate the separate CI evidence.
 
-### Phase 2 — Simulation MVP
+Learning milestones (Python fluency, math primer, ROS 2 tutorials) are
+deliberately not tracked as rows anymore: under the fine-tune-first plan they
+are learned just-in-time, and their evidence is simply the Phase 1-2 artifacts
+below working.
+
+### Phase 1 — Demo dataset (LeRobot)
 
 | Milestone | Proof | Command | Status |
 | --- | --- | --- | --- |
-| MuJoCo demo environment + recording | seeded MuJoCo demo script, MP4 and matching run metadata committed under `simulation/videos/` | `./tools/verify.sh --simulation`; `python3 -m simulation.demo_mujoco --video ...` | **PASS** — 163-frame diagnostic software projection committed (not native 3D rendering or PPO) |
-| Baseline PPO on a stock env | committed config, Monitor training log, and eval number | `simulation/results/stock_ppo_seed7_*` | **PASS** — Pendulum-v1, 50,176 steps, 10 eval episodes; mean return -1,030.014 |
-| Custom env for your task | Gymnasium checker + tests for reset, reward, grasp, place and drop | `./tools/verify.sh --simulation` | **PASS** — 7 MuJoCo environment tests |
-| Domain randomization implemented | seeded test checks position, size, friction and lighting vary and reach the MuJoCo model | `./tools/verify.sh --simulation` | **PASS** |
-| LeRobot exploration | notes + a fine-tuning script that runs headless in CI | `research-notes/` | NOT VERIFIED |
-| >80% learned-policy success across randomized conditions | `artifacts/proofs/tray_loading_eval.json` plus a rendered video | `python3 -m simulation.eval --model ... --seed N --episodes 100 --min-success-rate 0.80` | NOT VERIFIED — the short PPO smoke run achieved 0/3; scripted-controller success is not policy evidence |
+| v0 task spec written (scaled to rig payload) | one-paragraph spec committed under `research-notes/` | n/a | NOT VERIFIED |
+| 50+ clean demo episodes recorded | dataset on the Hub (private ok) + episode count + visualization screenshot in `research-notes/log.md` | n/a (record with `lerobot-record`) | NOT VERIFIED |
+| Dataset sanity-checked | garbage episodes deleted; camera keys/task wording consistent | n/a | NOT VERIFIED |
 
-Training runs write a proof with the seed, source/config hash, dependency
-versions, actual timesteps, checkpoint hash and git state. Evaluation proofs add
-`episodes`, `success_rate`, every episode seed/domain sample and the git commit.
-A video alone is not evidence — anyone can cherry-pick a clip. The seeded eval
-that reproduces the number is the evidence for the learned-policy milestone.
+### Phase 2 — Fine-tuned policy (LeRobot)
 
-### Phase 3 — Physical hardware
+| Milestone | Proof | Command | Status |
+| --- | --- | --- | --- |
+| Fine-tuning run completed (ACT baseline) | training config + checkpoint pushed to the Hub, run note in `research-notes/log.md` | `lerobot-train --policy.path=... --dataset.repo_id=...` | NOT VERIFIED |
+| Policy evaluated on the bench | ≥20 rollout episodes with success rate; the number, not a best-of clip | `lerobot-record --policy.path=<checkpoint>` (eval mode) | NOT VERIFIED |
+| ≥70% success on v0 task | eval record + raw bench video in `research-notes/log.md` | re-run the eval | NOT VERIFIED |
+
+Evidence discipline (carried over from the retired sim proofs): record the
+dataset version, training config, checkpoint hash, eval episode count and
+success rate per run. A video alone is not evidence — anyone can cherry-pick a
+clip. The reproducible eval is the evidence.
+
+### Phase 3 — Deploy, harden & iterate on the robot
 
 | Milestone | Proof | Status |
 | --- | --- | --- |
-| Arm + camera purchased | photo of the rig + serial numbers recorded in `research-notes/log.md` | NOT VERIFIED |
-| Arm moves via ROS 2 / SDK | a `tools/arm_smoke_test.py` (mirroring `ros2_smoke_test.py`) that commands one safe motion and asserts the reported joint state changed | NOT VERIFIED |
-| Perception pipeline | a test that feeds recorded frames through detection and asserts known objects are found, with the frames committed | NOT VERIFIED |
-| Sim policy on real arm | **raw, unedited, continuous video** (no cuts) + intervention count logged from the dashboard | NOT VERIFIED |
-| Teleoperation fallback | the dashboard's CALL SUPPORT path exercised on real hardware, with the intervention recorded | NOT VERIFIED |
+| Policy runs standalone on the arm | camera → policy → servos loop at usable control frequency; run note + bench video | NOT VERIFIED |
+| Policy runner wrapped as a ROS 2 node | a `tools/arm_smoke_test.py`-style probe (mirroring `ros2_smoke_test.py`): command one safe motion, assert joint state changed | NOT VERIFIED |
+| Robustness pass (lighting/variation/transforms) | before/after eval numbers under varied conditions | NOT VERIFIED |
+| Teleoperation fallback | the viewer/dashboard's CALL SUPPORT path exercised on real hardware, with the intervention recorded | NOT VERIFIED |
 | Multi-minute repetition video | one take, including failures and recoveries | NOT VERIFIED |
 
 Physical milestone proofs are *not* automatable — they are recorded evidence with
 a defined format. Define the format before you need it: continuous take, visible
-clock, intervention log exported from the dashboard, and the git commit of the
-policy shown on screen.
+clock, intervention log exported from the dashboard, and the checkpoint
+commit of the policy shown on screen.
 
 ### Phase 4 — Dashboard & first pilot
 
@@ -150,28 +157,34 @@ the proof (the WebSocket probe) then works against either implementation.
 
 ## Current honest status
 
-Current evidence (the base Python has no ROS 2 or MuJoCo; the simulation checks
-were run in a local optional-dependency venv with `./tools/verify.sh --simulation`):
+Current evidence (the base Python here has no ROS 2; the ROS 2 rows rest on
+public CI runs):
 
 | proof | transport | status |
 | --- | --- | --- |
 | Cloud ROS 2 in CI (`ros2` job, milestone proof) | (ros2) | **PASS** (run 37474982123) |
 | Cloud ROS 2 browser path (`ros2_viewer_check.sh`) | (ros2) | **PASS** ([run 37490542247](https://github.com/johnopaluwa/robo-rl/actions/runs/37490542247)) |
 | Codespaces devcontainer suite | (ros2) | **READY — runs on create** |
-| unit tests (21) | python 3 | **PASS** |
-| tools contract + regression tests (23) | python 3 | **PASS** |
-| pipeline logic proof (16 checks) | (sim) | **PASS** |
-| MuJoCo env + domain randomization tests (7) | (sim/MuJoCo) | **PASS** |
-| MuJoCo scripted randomized transfers | (sim/MuJoCo) | **PASS, 5/5** — scripted controller only |
-| stock Gymnasium PPO baseline | (sim) | **PASS**, 50,176 steps; 10 episodes; mean return -1,030.014 |
-| short custom-task PPO debug evaluation | (sim/MuJoCo) | **0/3** — debug-only, not a trained-policy milestone result ([record](../simulation/results/tray_ppo_debug_seed7.json)) |
-| live viewer + WebSocket command round-trip | (sim) | **PASS** |
+| unit tests | python 3 | **PASS** |
+| tools contract + regression tests | python 3 | **PASS** |
+| pipeline logic proof (16 checks) | (sim/viewer) | **PASS** |
+| live viewer + WebSocket command round-trip | (sim/viewer) | **PASS** |
 | Phase 0: niche chosen in README | docs | **PASS** |
 | Phase 0: 5 customer conversations | docs | **PENDING (0/5)** |
+| Phase 0: demo rig ordered & teleoperating | physical | **NOT VERIFIED** (no arm yet) |
+| Phase 1: 50+ demo episodes on the Hub | physical | **NOT VERIFIED** |
+| Phase 2: fine-tuned policy, ≥70% bench success | physical | **NOT VERIFIED** |
 | ROS 2 in the local interpreter | (ros2) | **NOT VERIFIED HERE**; real-DDS CI evidence above remains PASS |
 
-Simulation cannot tick the ROS 2 milestone. Nothing here can tick a hardware
-milestone. That is the point of the table.
+**Retired (2026-10-06):** the RL-from-scratch proofs (MuJoCo tray env +
+domain randomization tests, scripted-transfer demo, stock Pendulum PPO
+baseline, custom-task PPO debug run) were removed with the `simulation/`
+stack. Their final record — environment PASS, learned policy 0/3 on a short
+debug run — is preserved in git history under the tag
+`pre-pivot-rl-from-scratch`. Nothing on the current path inherits their
+credibility.
+
+Nothing here can tick a hardware milestone. That is the point of the table.
 
 ## How to read the CI history
 
@@ -230,7 +243,7 @@ They are written down because each is easy to reintroduce:
 3. Add it as a step in `tools/verify.sh` with a `record` line, so the summary
    table stays the single source of truth.
 4. Add a row to this file. Say what it does *not* prove.
-5. Tick the box in `MILESTONES.md` only when the script passes on the machine
+5. Tick the box in `docs/ROADMAP.md` only when the script passes on the machine
    that has the real thing (ROS 2 box, arm, customer site).
 
 ## Gaps in this system (known, deliberate)
@@ -238,14 +251,19 @@ They are written down because each is easy to reintroduce:
 - **`artifacts/` is gitignored.** Proofs are reproducible, not committed, so
   nothing rots. If you want a proof in the repo, commit the script that
   regenerates it, not the output.
-- **The CI workflow and devcontainer have not been executed yet.** They were
-  written in a container without Docker or ROS 2, so their first run in Actions /
-  Codespaces is the real test. That is stated here rather than hidden: an
-  unverified claim should be visible, and a red run is information.
+- **The Codespaces devcontainer has not been executed yet.** CI has (green
+  runs above); the devcontainer's first run in Codespaces is still its real
+  test. That is stated here rather than hidden: an unverified claim should be
+  visible, and a red run is information.
 - **`colcon test` is deliberately not in CI.** The package's tests are run
   directly by `verify.sh` under the ROS 2 environment; wiring `colcon test` adds
   a pytest dependency that could not be verified from here. Add it once you can
   watch it run.
-- **The sim's grasp model is a teaching model**, not a policy: `simulate_grasp`
-  is a probability curve, not physics. It exists so the confidence/threshold
-  trade-off is visible, and it is labelled as such in the code and the UI.
+- **The viewer's grasp model is a teaching model**, not a policy: the sim-mode
+  grasp is a probability curve, not physics and not a learned policy. It exists
+  so the confidence/threshold trade-off is visible, and it is labelled as such
+  in the code and the UI.
+- **Phase 1-2 proofs are not automatable from this repo.** Demo datasets and
+  fine-tune/eval runs happen in the LeRobot stack on real hardware; their
+  evidence format (dataset version, config, checkpoint, eval numbers) is
+  defined in the registry above so it is recorded the same way every time.

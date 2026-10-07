@@ -1,3 +1,0 @@
-# Small CPU/headless runtime for MuJoCo plus the Gymnasium environment API.
-numpy>=1.24,<3
-gymnasium[mujoco]>=1.0,<2

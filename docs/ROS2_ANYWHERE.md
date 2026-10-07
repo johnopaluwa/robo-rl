@@ -141,11 +141,11 @@ matter how green the badge is.
 ## Recommended sequence
 
 1. **Today:** push the branch, let the Actions `ros2` job run, look at the
-   summary page. If it is green, `MILESTONES.md` can tick the ROS 2 box — with a
+   summary page. If it is green, `docs/ROADMAP.md` can tick the ROS 2 box — with a
    URL as the evidence.
 2. **This week:** open a Codespace once and drive the viewer in `--mode ros2` so
    you have *felt* the loop: button → DDS → node → log line.
 3. **Then stop touching cloud ROS 2.** It exists to prove the plumbing, not to
-   be a workspace. Your Phase 2 (MuJoCo training) wants a GPU box you rent for
-   hours, and Phase 3 needs a real arm on a real bench. The cloud's job here is
-   done the moment the checkbox is legitimately ticked.
+   be a workspace. Your Phase 2 (policy fine-tuning) wants a rented GPU box or
+   Hugging Face Jobs, and Phases 1-3 need the real arm on a real bench. The
+   cloud's job here is done the moment the checkbox is legitimately ticked.

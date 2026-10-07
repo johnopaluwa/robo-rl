@@ -1,2 +1,0 @@
--r requirements-sim.txt
-imageio[ffmpeg]>=2.34,<3
